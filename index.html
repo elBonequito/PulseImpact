@@ -5,7 +5,49 @@
 .sector-tick:hover,.sector-tick:focus-visible{border-left-color:#ffc96d;outline:1px solid #ffc96d}
 .bar{position:relative;margin:10px 6px;min-width:min(360px,85vw)}
 #serafimLayer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">LEVITAÇÃO / V22</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay" id="overlay"><small>FREQUÊNCIA ENCONTRADA</small><h2 id="title">PULSE IMPACT</h2><p id="desc">Modo de teste: nave invencível. Pilote dentro do sinal. Atravesse formações senoidais e sobreviva ao seu set. Os graves distorcem o espaço e alimentam o hiperespaço.</p><button id="start">INICIAR TRANSMISSÃO →</button><p>WASD / SETAS — mover · TIRO AUTOMÁTICO<br>ESPAÇO — pulso de defesa · P — pausar</p><small>Seu set completo · 15:33 · use fones</small></div></div><nav><button id="pause">Ⅱ PAUSAR</button><button id="restart">↺ REINICIAR</button><button id="bossPreview">TESTAR 2:47</button><div class="bar" id="timeline" aria-label="Ir para um setor"><i id="progress"></i></div><button type="button" id="nextSector">PRÓXIMA FASE →</button><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
+[hidden]{display:none!important}
+body{background:#110d15;color:#d8c49a}header,footer{color:#a8b987} .shell{background:#24201e;border-color:#5b4d37}
+.screen{background:#130e17;border-color:#2c2425}
+.game-menu.overlay{display:block;z-index:3;padding:0;text-align:left;color:#ead8ad;background:#150f19;overflow:hidden}
+.menu-art,.menu-ruins,.menu-stars,.menu-shade{position:absolute;inset:0;pointer-events:none}
+.menu-art{background:url('art/space.webp') center/cover;transform:scale(1.05);animation:orbit 24s ease-in-out infinite alternate}
+.menu-ruins{background:url('art/menu-cathedral.webp') center/cover;transform:scaleX(-1);mask-image:linear-gradient(to right,#000 7%,#000d 37%,transparent 66%);opacity:.91}
+.menu-stars{background-image:radial-gradient(circle,#dfc48d 1px,transparent 1.4px),radial-gradient(circle,#deab7a 1px,transparent 1.4px);background-size:109px 87px,151px 113px;opacity:.32;animation:drift 24s linear infinite}
+.menu-shade{background:linear-gradient(90deg,#110c16 0%,#110c16ea 29%,#110c1666 55%,transparent 75%)}
+.menu-ship{position:absolute;left:46%;top:66%;width:32%;image-rendering:pixelated;transform:rotate(-8deg);filter:drop-shadow(0 4px 16px #000);pointer-events:none}
+.menu-ship img{display:block;width:100%}
+.menu-flame{position:absolute;left:2%;top:50%;height:7%;width:12%;background:#f7a451;filter:blur(6px);animation:engine .48s ease-in-out infinite alternate}
+.menu-content{position:relative;z-index:1;padding:clamp(12px,4vw,54px);width:58%;height:100%;display:flex;flex-direction:column;justify-content:center}
+.game-menu h2{margin:0 0 clamp(8px,2vw,24px);font:bold clamp(25px,5.2vw,68px)/.87 Georgia,serif;letter-spacing:.085em;color:#e0bf78;text-shadow:0 3px #543724,0 0 22px #91644377}
+.menu-options{display:grid;gap:3px;max-width:300px}
+.menu-options button,.menu-back{position:relative;text-align:left;border:1px solid transparent;background:transparent;color:#e8d7b1;padding:clamp(5px,1.05vw,12px) 12px clamp(5px,1.05vw,12px) 33px;font:700 clamp(12px,1.7vw,20px) monospace}
+.menu-options button:hover,.menu-options button[aria-current=true]{border-color:#91744b;background:#7b5b302e;color:#ffe6aa}
+.menu-options button[aria-current=true]::before{content:'☾';position:absolute;left:11px;color:#f1ca76}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid #f1ca76;outline-offset:2px}
+.menu-copy{font-size:clamp(11px,1.55vw,16px);line-height:1.5;margin:0 0 8px}
+.game-menu.paused{background:#100c16b8}
+.game-menu.paused .menu-art,.game-menu.paused .menu-ruins,.game-menu.paused .menu-stars,.game-menu.paused .menu-shade,.game-menu.paused .menu-ship{display:none}
+.game-menu.launching .menu-ship{animation:launch .62s cubic-bezier(.4,0,.9,.7) forwards}
+.game-menu.launching .menu-content{opacity:0;transition:opacity .18s}
+.game-menu.launching{animation:depart .62s ease-in forwards}
+.dev-panel{color:#a9ba88;margin:9px 0 0}.dev-panel summary{cursor:pointer}.dev-panel nav{margin-top:8px}
+@keyframes orbit{to{transform:scale(1.10) translateX(-1%)}}
+@keyframes drift{to{background-position:-109px 87px,-151px 113px}}
+@keyframes engine{to{opacity:.42;transform:scaleX(.7)}}
+@keyframes launch{to{transform:translate(116%,-90%) rotate(-12deg) scale(.22);opacity:0}}
+@keyframes depart{70%{opacity:1}to{opacity:0}}
+@media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
+@media(prefers-reduced-motion:reduce){.menu-art,.menu-stars,.menu-flame{animation:none}.game-menu.launching,.game-menu.launching .menu-ship{animation:none}}
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V24</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+<div class="menu-art"></div><div class="menu-ruins"></div><div class="menu-stars"></div><div class="menu-shade"></div>
+<div class="menu-ship"><img src="art/ship.webp" alt=""><span class="menu-flame"></span></div>
+<div class="menu-content">
+<h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
+<div class="menu-options" id="menuOptions" aria-label="Opções do jogo"></div>
+<p class="menu-copy" id="menuControls" hidden>Setas ou WASD para mover. Tiro automático. Espaço para o pulso de defesa. P ou Esc para pausar. No toque, arraste para mover e toque duas vezes para o pulso.</p>
+<label class="menu-copy" id="menuAudio" hidden>Volume <input id="menuVolume" aria-label="Volume da música" type="range" min="0" max="1" step=".05" value=".7"></label>
+<button type="button" class="menu-back" id="menuBack" hidden>← Voltar</button>
+</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><details class="dev-panel"><summary>Painel de desenvolvimento</summary><nav><button id="bossPreview">TESTAR 2:47</button><div class="bar" id="timeline" aria-label="Ir para um setor"><i id="progress"></i></div><button type="button" id="nextSector">PRÓXIMA FASE →</button><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></details></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('c'),g=canvas.getContext('2d'),audio=$('music');g.imageSmoothingEnabled=false;
 let bassAnalyser,bassBins,bassFilter,bassFloor=0.01,bassPeak=0.03,bassEnv=0,bassRaw=0,drive=1,travel=0,rings=[],trail=[],shock=0;
@@ -21,9 +63,96 @@ bassFilter=ctx.createBiquadFilter();bassFilter.type='lowpass';bassFilter.frequen
 bassAnalyser=ctx.createAnalyser();bassAnalyser.fftSize=2048;bassBins=new Float32Array(bassAnalyser.fftSize);
 source.connect(bassFilter);bassFilter.connect(bassAnalyser)}
 function reset(){asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
-async function start(){try{initAudio();await ctx.resume();if(!started||hp<=0||audio.ended)reset();await audio.play();started=true;playing=true;$('overlay').style.display='none';$('pause').textContent='Ⅱ PAUSAR';}catch(e){$('desc').textContent='Não foi possível iniciar o áudio. Tente clicar novamente ou abrir o HTML no Chrome/Edge.'}}
-function pause(){if(!started)return;if(playing){audio.pause();playing=false;$('title').textContent='EM SUSPENSÃO';$('desc').textContent='A transmissão continua de onde você parou.';$('start').textContent='CONTINUAR →';$('overlay').style.display='flex';$('pause').textContent='▶ CONTINUAR'}else start()}
-function end(win=false){playing=false;audio.pause();$('title').textContent=win?'SINAL COMPLETO':'SINAL PERDIDO';$('desc').textContent=`${score.toLocaleString('pt-BR')} pontos · ${kills} naves destruídas · setor ${level}.`;$('start').textContent='TENTAR NOVAMENTE →';$('overlay').style.display='flex';if(win)started=false}
+let menuPage = 'home', menuSelection = 0, openingGame = false, launchTimer = 0, uiSession = 0;
+const menuButtons = () => [...$('menuOptions').querySelectorAll('button')];
+function chooseMenu(index, focus = true) {
+  const buttons = menuButtons();
+  if (!buttons.length) return;
+  menuSelection = (index + buttons.length) % buttons.length;
+  buttons.forEach((button, i) => button.setAttribute('aria-current', String(i === menuSelection)));
+  if (focus) buttons[menuSelection].focus({preventScroll:true});
+}
+function showMenu(page, message = '') {
+  menuPage = page;
+  const overlay = $('overlay');
+  overlay.style.display = '';
+  overlay.classList.remove('launching');
+  overlay.classList.toggle('paused', page === 'pause' || page === 'result');
+  $('title').textContent = page === 'pause' ? 'Em suspensão' : page === 'controls' ? 'Controles' :
+    page === 'audio' ? 'Áudio' : page === 'result' ? message : 'PULSE IMPACT';
+  $('desc').textContent = '';
+  $('menuControls').hidden = page !== 'controls';
+  $('menuAudio').hidden = page !== 'audio';
+  $('menuBack').hidden = !['controls','audio'].includes(page);
+  $('menuOptions').replaceChildren();
+  const options = page === 'home' ? [['Iniciar', () => start(true, true)],
+    ['Controles', () => showMenu('controls')], ['Áudio', () => showMenu('audio')]] :
+    page === 'pause' ? [['Continuar', () => start()], ['Reiniciar', () => start(true)],
+    ['Voltar ao menu', goHome]] : page === 'result' ? [['Voltar ao menu', goHome]] : [];
+  options.forEach(([label, action], i) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.textContent = label;
+    button.onpointerenter = () => chooseMenu(i, false);
+    button.onfocus = () => chooseMenu(i, false);
+    button.onclick = action;
+    $('menuOptions').appendChild(button);
+  });
+  chooseMenu(0);
+  if (page === 'audio') $('menuVolume').focus();
+  if (page === 'controls') $('menuBack').focus();
+  $('gameTools').hidden = page === 'home' || page === 'controls' || page === 'audio';
+}
+function goHome() {
+  uiSession++;
+  clearTimeout(launchTimer);
+  openingGame = false;
+  audio.pause(); playing = false; started = false;
+  keys = {}; pointer = null;
+  reset();
+  $('clock').textContent = '00:00 / ' + fmt(audio.duration || 933);
+  $('progress').style.width = '0%';
+  $('status').textContent = 'AGUARDANDO PILOTO';
+  showMenu('home');
+}
+function showPlaying() {
+  menuPage = 'game';
+  $('overlay').classList.remove('launching');
+  $('overlay').style.display = 'none';
+  $('gameTools').hidden = false;
+  $('pause').textContent = 'Ⅱ PAUSAR';
+  document.activeElement?.blur();
+}
+async function start(fresh = false, animate = false) {
+  if (openingGame || seekingSector) return;
+  openingGame = true;
+  const session = ++uiSession;
+  try {
+    initAudio();
+    if (fresh || !started || hp <= 0 || audio.ended) reset();
+    await Promise.all([ctx.resume(), audio.play()]);
+    if (session !== uiSession) return;
+    started = true; playing = true; keys = {}; pointer = null;
+    if (animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      menuPage = 'launch';
+      $('overlay').classList.add('launching');
+      launchTimer = setTimeout(() => { if (session === uiSession) showPlaying(); }, 620);
+    } else showPlaying();
+  } catch {
+    if (session === uiSession) $('desc').textContent = 'Não foi possível iniciar o áudio. Tente novamente.';
+  } finally { if (session === uiSession) openingGame = false; }
+}
+function pause() {
+  if (!playing || (menuPage !== 'game' && menuPage !== 'launch')) return;
+  clearTimeout(launchTimer);
+  audio.pause(); playing = false; keys = {}; pointer = null;
+  stopRadio();
+  showMenu('pause');
+}
+function end(win = false) {
+  playing = false; started = false; audio.pause(); stopRadio();
+  showMenu('result', win ? 'Sinal completo' : 'Sinal perdido');
+  $('desc').textContent = score.toLocaleString('pt-BR') + ' pontos';
+}
 function burst(x,y,n=12){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*230,vy:(Math.random()-.5)*230,t:.3+Math.random()*.5})}
 function pulse(){if(!playing||cooldown>0)return;cooldown=8;hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
 let impactVX = 0, impactVY = 0;
@@ -78,14 +207,14 @@ async function seekSector(seconds) {
     inv = 0;
     lastBeat = seconds - 1;
     phase = 2;
-    $('overlay').style.display = 'none';
-    $('pause').textContent = 'Ⅱ PAUSAR';
+    showPlaying();
     $('clock').textContent = fmt(seconds) + ' / ' + fmt(audio.duration || 933);
     $('progress').style.width = (seconds / (audio.duration || 933) * 100) + '%';
   } catch (error) {
     audio.pause();
     playing = false;
-    $('title').textContent = 'SALTO INTERROMPIDO';
+    showMenu('pause');
+    $('title').textContent = 'Salto interrompido';
     $('desc').textContent = 'O áudio não conseguiu chegar ao marcador. Clique na fase para tentar novamente.';
     $('overlay').style.display = '';
   } finally {
@@ -128,9 +257,42 @@ $('nextSector').onclick = () => {
 };
 audio.addEventListener('loadedmetadata', markSectors);
 document.addEventListener('DOMContentLoaded', markSectors);
-$('bossPreview').onclick=async()=>{if(!started||hp<=0||audio.ended)await start();audio.currentTime=162;entryPulseDone=false;enemies=[];hostile=[];bullets=[];bossWasActive=false;if(!playing)await start()};$('start').onclick=start;$('pause').onclick=pause;$('restart').onclick=()=>{reset();started=false;start()};audio.volume=.7;$('volume').oninput=e=>{audio.volume=+e.target.value};audio.onended=()=>end(true);
-window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();keys[e.code]=true;if(e.code==='KeyP'&&!e.repeat)pause();if(e.code==='Space'&&!e.repeat)pulse()});window.addEventListener('keyup',e=>keys[e.code]=false);window.addEventListener('blur',()=>{keys={};if(playing)pause()});
-let tap=0;canvas.onpointerdown=e=>{canvas.setPointerCapture(e.pointerId);movePointer(e);if(performance.now()-tap<300)pulse();tap=performance.now()};canvas.onpointermove=e=>{if(e.buttons)movePointer(e)};canvas.onpointerup=()=>pointer=null;canvas.onpointercancel=()=>pointer=null;function movePointer(e){const r=canvas.getBoundingClientRect();pointer={x:(e.clientX-r.left)/r.width*960,y:(e.clientY-r.top)/r.height*480}}
+$('bossPreview').onclick = () => seekSector(162);
+$('pause').onclick = () => playing ? pause() : start();
+$('menuBack').onclick = () => showMenu('home');
+function setVolume(value) {
+  audio.volume = Number(value);
+  $('menuVolume').value = $('volume').value = value;
+}
+setVolume('.7');
+$('volume').oninput = $('menuVolume').oninput = event => setVolume(event.target.value);
+audio.onended = () => end(true);
+window.addEventListener('keydown', event => {
+  const code = event.code;
+  if (menuPage !== 'game') {
+    if (menuPage === 'launch') return;
+    if (code === 'Escape') {
+      event.preventDefault();
+      if (menuPage === 'pause') start();
+      else if (menuPage === 'audio' || menuPage === 'controls') showMenu('home');
+      return;
+    }
+    if (menuButtons().length && ['ArrowUp','ArrowDown','KeyW','KeyS','Enter'].includes(code)) {
+      event.preventDefault();
+      if (code === 'Enter') { if (!event.repeat) menuButtons()[menuSelection]?.click(); }
+      else chooseMenu(menuSelection + (code === 'ArrowUp' || code === 'KeyW' ? -1 : 1));
+    }
+    return;
+  }
+  if (event.target?.matches?.('input, summary, button')) return;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Escape'].includes(code)) event.preventDefault();
+  if ((code === 'KeyP' || code === 'Escape') && !event.repeat) { pause(); return; }
+  keys[code] = true;
+  if (code === 'Space' && !event.repeat) pulse();
+});
+window.addEventListener('keyup', event => { keys[event.code] = false; });
+window.addEventListener('blur', () => { if (playing) pause(); });
+let tap=0;canvas.onpointerdown=e=>{if(menuPage!=='game')return;canvas.setPointerCapture(e.pointerId);movePointer(e);if(performance.now()-tap<300)pulse();tap=performance.now()};canvas.onpointermove=e=>{if(menuPage==='game'&&e.buttons)movePointer(e)};canvas.onpointerup=()=>pointer=null;canvas.onpointercancel=()=>pointer=null;function movePointer(e){const r=canvas.getBoundingClientRect();pointer={x:(e.clientX-r.left)/r.width*960,y:(e.clientY-r.top)/r.height*480}}
 function wave(){const y=90+Math.random()*300;const tough=level%4===0;for(let i=0;i<(tough?1:5);i++)enemies.push({x:1000+i*65,y,base:y,t:-i*.28,hp:tough?20:2+Math.floor(level/5),r:tough?27:12,fire:1.2+i*.35,kind:tough?1:0})}
 function update(dt){const t=audio.currentTime;
 if (serafimActive(t)) {
@@ -177,7 +339,7 @@ if (inv <= 0) {
   );
   const hazards = serafimFrame;
   const beam = hazards?.beam;
-  const serafimHit = beam?.live && Math.abs(ship.y - beam.y) < 16
+  const serafimHit = beam?.live && ship.x - 25 <= beam.x && Math.abs(ship.y - beam.y) < 16
     ? {x: ship.x, y: beam.y}
     : hazards && [...hazards.waves, ...hazards.drones, ...hazards.shots].find(object =>
       shipTouches(object.x, object.y, object.radius)
@@ -319,17 +481,26 @@ const droneDamage = new Map();
 const droneAim = new Map();
 const serafimActive = time => time >= SERAFIM.start && time < SERAFIM.end;
 function serafimState(time) {
-  const state = {beam: null, waves: [], drones: [], shots: []};
+  const state = {beam: null, attackFrame: null, waves: [], drones: [], shots: []};
   if (!serafimActive(time) || time < SERAFIM.combatStart) return state;
   const elapsed = time - SERAFIM.combatStart;
   const beatTime = (time - SERAFIM.beatOrigin) / SERAFIM.beatPeriod;
   const beatIndex = Math.floor(beatTime);
   const cycle = beatIndex % 8;
   const beatPhase = beatTime - beatIndex;
-  if ((cycle === 0 || (cycle === 1 && beatPhase < .72)) &&
-      SERAFIM.beatOrigin + (beatIndex - cycle) * SERAFIM.beatPeriod >= SERAFIM.combatStart) {
-    const lane = Math.floor(beatIndex / 8) % 4;
-    state.beam = {x: 821, y: [98, 264, 154, 317][lane], live: cycle === 1};
+  const attackStart = SERAFIM.beatOrigin + (beatIndex - cycle) * SERAFIM.beatPeriod;
+  if (attackStart >= SERAFIM.combatStart) {
+    if (cycle === 0) state.attackFrame = Math.min(3, Math.floor(beatPhase * 4));
+    else if (cycle === 1 && beatPhase < .72) state.attackFrame = beatPhase < .36 ? 4 : 5;
+    else if (cycle === 1 || (cycle === 2 && beatPhase < .28)) {
+      state.attackFrame = cycle === 1 ? 6 : 7;
+    }
+    if (state.attackFrame !== null && state.attackFrame < 6) {
+      const live = state.attackFrame >= 4;
+      const [tipX, tipY] = serafimScepterTips[state.attackFrame];
+      state.beam = {x: serafimPose.x + tipX * serafimPose.scale,
+        y: serafimPose.y + tipY * serafimPose.scale, live};
+    }
   }
   for (let beat = beatIndex - 8; beat <= beatIndex; beat++) {
     const launch = SERAFIM.beatOrigin + beat * SERAFIM.beatPeriod;
@@ -447,6 +618,9 @@ function drawInterceptor() {
 }
 const serafimLayer = $('serafimLayer').getContext('2d');
 serafimLayer.imageSmoothingEnabled = false;
+const serafimPose = {x: 696, y: 85, scale: 256 / 444};
+const serafimScepterTips = [[87,311],[84,289],[51,344],[51,346],[54,342],[69,325]];
+const serafimAttackArt = loadArt('art/serafim-attack.webp');
 const serafimIdleArt = loadArt('art/serafim-idle.webp');
 function serafimIdleFrame(time) {
   return Math.floor(Math.max(0, time - BOSS_START) * 8) % 8;
@@ -455,33 +629,22 @@ function drawSerafim(time) {
   serafimLayer.clearRect(0, 0, 960, 480);
   if (!serafimActive(time)) return;
   const state = serafimFrame || serafimState(time);
-  const y = 204 + Math.round(Math.sin(time * 2) * 5);
-  const width = 246;
-  if (loadedArt(serafimArt)) {
+  const attacking = state.attackFrame !== null;
+  const art = attacking ? serafimAttackArt : serafimIdleArt;
+  const frame = attacking ? state.attackFrame : serafimIdleFrame(time);
+  serafimLayer.save();
+  serafimLayer.globalAlpha = smooth(BOSS_START, SERAFIM.combatStart, time);
+  if (loadedArt(art)) {
+    const cell = 444;
+    const size = cell * serafimPose.scale;
+    serafimLayer.drawImage(art, (frame % 4) * cell, Math.floor(frame / 4) * cell,
+      cell, cell, serafimPose.x, serafimPose.y, size, size);
+  } else if (loadedArt(serafimArt)) {
+    const width = 246;
     const height = width * serafimArt.naturalHeight / serafimArt.naturalWidth;
-    serafimLayer.save();
-    serafimLayer.globalAlpha = smooth(BOSS_START, SERAFIM.combatStart, time);
-    if (!state.beam && loadedArt(serafimIdleArt)) {
-      const frame = serafimIdleFrame(time);
-      // Fixed trunk reference across the sheet keeps the authored vertical motion.
-      const cellSize = 444;
-      const size = 256;
-      serafimLayer.drawImage(serafimIdleArt, (frame % 4) * cellSize,
-        Math.floor(frame / 4) * cellSize, cellSize, cellSize,
-        824 - size / 2, 204 - 119, size, size);
-    } else {
-      serafimLayer.drawImage(serafimArt, 824 - width / 2, y - height / 2, width, height);
-    }
-    serafimLayer.restore();
-    if (state.beam && !state.beam.live) {
-      const charge = ((time - SERAFIM.beatOrigin) / SERAFIM.beatPeriod) % 1;
-      serafimLayer.save();
-      serafimLayer.globalAlpha = .2 + charge * .7;
-      serafimLayer.shadowColor = '#ffad42'; serafimLayer.shadowBlur = 5 + charge * 15;
-      serafimLayer.fillStyle = '#ffd275'; serafimLayer.fillRect(832, y - height * .238, 8 + charge * 6, 2);
-      serafimLayer.restore();
-    }
+    serafimLayer.drawImage(serafimArt, 824 - width / 2, 204 - height / 2, width, height);
   }
+  serafimLayer.restore();
   if (state.beam) {
     g.fillStyle = state.beam.live ? '#fff3cc' : '#eeae69';
     rect(0, state.beam.y - (state.beam.live ? 7 : 1), state.beam.x, state.beam.live ? 14 : 2);
@@ -590,5 +753,5 @@ function drawRadio() {
   g.restore();
 }
 
-function loop(now){const dt=Math.min(.04,(now-last)/1000||.016);last=now;if(playing&&!seekingSector)update(dt);updateRadio();draw();drawRadio();requestAnimationFrame(loop)}requestAnimationFrame(loop);
+function loop(now){const dt=Math.min(.04,(now-last)/1000||.016);last=now;if(playing&&!seekingSector){update(dt);updateRadio();draw();drawRadio();}requestAnimationFrame(loop)}showMenu('home');requestAnimationFrame(loop);
 </script></html>
