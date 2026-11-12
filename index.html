@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.menu-art,.menu-stars,.menu-flame{animation:none}.game-menu.launching,.game-menu.launching .menu-ship{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V27</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V28</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art"></div><div class="menu-ruins"></div><div class="menu-stars"></div><div class="menu-shade"></div>
 <div class="menu-ship"><img src="art/ship.webp" alt=""><span class="menu-flame"></span></div>
 <div class="menu-content">
@@ -62,7 +62,7 @@ function initAudio(){if(ctx)return;ctx=new AudioContext();source=ctx.createMedia
 bassFilter=ctx.createBiquadFilter();bassFilter.type='lowpass';bassFilter.frequency.value=160;bassFilter.Q.value=.707;
 bassAnalyser=ctx.createAnalyser();bassAnalyser.fftSize=2048;bassBins=new Float32Array(bassAnalyser.fftSize);
 source.connect(bassFilter);bassFilter.connect(bassAnalyser)}
-function reset(){asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
+function reset(){asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
 let menuPage = 'home', menuSelection = 0, openingGame = false, launchTimer = 0, uiSession = 0;
 const menuButtons = () => [...$('menuOptions').querySelectorAll('button')];
 function chooseMenu(index, focus = true) {
@@ -172,7 +172,7 @@ async function seekSector(seconds) {
   if (seekingSector) return;
   seekingSector = true;
   stopRadio();
-  droneDamage.clear(); droneAim.clear(); serafimFrame = null;
+  droneDamage.clear(); droneAim.clear(); serafimFrame = null; serafimAim = null;
   const nextButton = $('nextSector');
   nextButton.disabled = true;
   try {
@@ -339,8 +339,8 @@ if (inv <= 0) {
   );
   const hazards = serafimFrame;
   const beam = hazards?.beam;
-  const serafimHit = beam?.live && ship.x - 25 <= beam.x && Math.abs(ship.y - beam.y) < 16
-    ? {x: ship.x, y: beam.y}
+  const serafimHit = beam?.live && serafimBeamHitsShip(beam)
+    ? {x: beam.x, y: beam.y}
     : hazards && [...hazards.waves, ...hazards.drones, ...hazards.shots].find(object =>
       shipTouches(object.x, object.y, object.radius)
     );
@@ -496,10 +496,7 @@ function serafimState(time) {
       state.attackFrame = cycle === 1 ? 6 : 7;
     }
     if (state.attackFrame !== null && state.attackFrame < 6) {
-      const live = state.attackFrame >= 4;
-      const [tipX, tipY] = serafimScepterTips[state.attackFrame];
-      state.beam = {x: Math.round(serafimPose.x + tipX * serafimPose.scale),
-        y: Math.round(serafimPose.y + tipY * serafimPose.scale), live};
+      state.attackStart = attackStart;
     }
   }
   for (let beat = beatIndex - 8; beat <= beatIndex; beat++) {
@@ -539,10 +536,12 @@ function serafimState(time) {
   return state;
 }
 let serafimFrame = null;
+let serafimAim = null;
 function updateSerafim(time) {
   serafimFrame = null;
-  if (!serafimActive(time)) return;
+  if (!serafimActive(time)) { serafimAim = null; return; }
   const state = serafimState(time);
+  aimSerafim(state, time);
   for (const drone of state.drones) {
     for (const bullet of bullets) {
       if (bullet.dead || Math.hypot(drone.x - bullet.x, drone.y - bullet.y) >= 16) continue;
@@ -621,8 +620,72 @@ function drawInterceptor() {
 const serafimLayer = $('serafimLayer').getContext('2d');
 serafimLayer.imageSmoothingEnabled = false;
 const serafimPose = {x: 696, y: 85, scale: 256 / 444};
-const serafimScepterTips = [[87,311],[84,289],[51,344],[51,346],[53.93,341.51],[66.48,324.55]];
-const serafimAttackArt = loadArt('art/serafim-attack.webp');
+const serafimBodyArt = loadArt('art/serafim-corpo-mira.png');
+const serafimArmArt = loadArt('art/serafim-cetro.png');
+const serafimShoulder = {x: 185, y: 177};
+const serafimTip = {x: 87, y: 311};
+const scepterAngle = Math.atan2(311 - 238, 87 - 121);
+const tipOffsetX = serafimTip.x - serafimShoulder.x;
+const tipOffsetY = serafimTip.y - serafimShoulder.y;
+const tipAcross = tipOffsetY * Math.cos(scepterAngle) - tipOffsetX * Math.sin(scepterAngle);
+const beamLength = Math.hypot(960, 480);
+
+function aimSerafim(state, time) {
+  const frame = state.attackFrame;
+  if (frame === null) { serafimAim = null; return; }
+  const {x, y, scale} = serafimPose;
+  const shoulderX = x + serafimShoulder.x * scale;
+  const shoulderY = y + serafimShoulder.y * scale;
+  const extension = [.94, .96, .98, 1, 1, .975, .96, 1][frame];
+  const targetX = ship.x - shoulderX, targetY = ship.y - shoulderY;
+  const distance = Math.hypot(targetX, targetY);
+  // The shaft axis passes beside the shoulder, so account for its offset when aiming.
+  const correction = Math.asin(Math.max(-1, Math.min(1, tipAcross * scale * extension / distance)));
+  const target = Math.atan2(targetY, targetX) - correction;
+  if (!serafimAim || (state.attackStart !== undefined && serafimAim.start !== state.attackStart)) {
+    serafimAim = {start: state.attackStart, angle: scepterAngle, time, locked: false};
+  }
+  if (frame < 4) {
+    const delta = target - serafimAim.angle;
+    const smoothing = 1 - Math.exp(-18 * Math.max(0, time - serafimAim.time));
+    serafimAim.angle += Math.atan2(Math.sin(delta), Math.cos(delta)) * smoothing;
+  } else if (frame < 6 && !serafimAim.locked) {
+    serafimAim.angle = target;
+    serafimAim.locked = true;
+  }
+  serafimAim.time = time;
+
+  const recovery = frame < 6 ? 0 : (frame - 5) / 2;
+  const delta = scepterAngle - serafimAim.angle;
+  const lift = frame < 3 ? [.23, .13, .045][frame] : 0;
+  const angle = serafimAim.angle + Math.atan2(Math.sin(delta), Math.cos(delta)) * recovery + lift;
+  const rotation = angle - scepterAngle;
+  state.arm = {rotation, extension};
+  if (frame >= 2 && frame < 6) {
+    const dx = Math.cos(angle), dy = Math.sin(angle);
+    const cos = Math.cos(rotation), sin = Math.sin(rotation);
+    state.beam = {
+      x: shoulderX + (tipOffsetX * cos - tipOffsetY * sin) * scale * extension,
+      y: shoulderY + (tipOffsetX * sin + tipOffsetY * cos) * scale * extension,
+      dx, dy, live: frame >= 4
+    };
+  }
+}
+
+function serafimBeamHitsShip(beam) {
+  // Intersect the visible beam strip with each of the existing ship hull rectangles.
+  return [[-25,-7,20,7],[-19,-13,-7,13],[20,-3,34,3]].some(([l,t,r,b]) => {
+    const x = ship.x + (l + r) / 2 - beam.x, y = ship.y + (t + b) / 2 - beam.y;
+    const w = (r - l) / 2, h = (b - t) / 2;
+    const {dx, dy} = beam;
+    const forward = x * dx + y * dy, along = w * Math.abs(dx) + h * Math.abs(dy);
+    const across = w * Math.abs(dy) + h * Math.abs(dx);
+    return forward + along >= 0 && forward - along <= beamLength &&
+      Math.abs(y * dx - x * dy) <= across + 7 &&
+      Math.abs(x - dx * beamLength / 2) <= w + Math.abs(dx) * beamLength / 2 + Math.abs(dy) * 7 &&
+      Math.abs(y - dy * beamLength / 2) <= h + Math.abs(dy) * beamLength / 2 + Math.abs(dx) * 7;
+  });
+}
 const serafimIdleArt = loadArt('art/serafim-idle.webp');
 function serafimIdleFrame(time) {
   return Math.floor(Math.max(0, time - BOSS_START) * 8) % 8;
@@ -631,15 +694,22 @@ function drawSerafim(time) {
   serafimLayer.clearRect(0, 0, 960, 480);
   if (!serafimActive(time)) return;
   const state = serafimFrame || serafimState(time);
-  const attacking = state.attackFrame !== null;
-  const art = attacking ? serafimAttackArt : serafimIdleArt;
-  const frame = attacking ? state.attackFrame : serafimIdleFrame(time);
+  const frame = serafimIdleFrame(time);
   serafimLayer.save();
   serafimLayer.globalAlpha = smooth(BOSS_START, SERAFIM.combatStart, time);
-  if (loadedArt(art)) {
+  if (state.arm && loadedArt(serafimBodyArt) && loadedArt(serafimArmArt)) {
+    const {x, y, scale} = serafimPose;
+    serafimLayer.translate(x, y);
+    serafimLayer.scale(scale, scale);
+    serafimLayer.drawImage(serafimBodyArt, 0, 0);
+    serafimLayer.translate(serafimShoulder.x, serafimShoulder.y);
+    serafimLayer.rotate(state.arm.rotation);
+    serafimLayer.scale(state.arm.extension, state.arm.extension);
+    serafimLayer.drawImage(serafimArmArt, 70 - serafimShoulder.x, 169 - serafimShoulder.y);
+  } else if (loadedArt(serafimIdleArt)) {
     const cell = 444;
     const size = cell * serafimPose.scale;
-    serafimLayer.drawImage(art, (frame % 4) * cell, Math.floor(frame / 4) * cell,
+    serafimLayer.drawImage(serafimIdleArt, (frame % 4) * cell, Math.floor(frame / 4) * cell,
       cell, cell, serafimPose.x, serafimPose.y, size, size);
   } else if (loadedArt(serafimArt)) {
     const width = 246;
@@ -648,8 +718,15 @@ function drawSerafim(time) {
   }
   serafimLayer.restore();
   if (state.beam) {
-    g.fillStyle = state.beam.live ? '#fff3cc' : '#eeae69';
-    rect(0, state.beam.y - (state.beam.live ? 7 : 1), state.beam.x, state.beam.live ? 14 : 2);
+    const {x, y, dx, dy, live} = state.beam;
+    serafimLayer.save();
+    serafimLayer.translate(x, y);
+    serafimLayer.rotate(Math.atan2(dy, dx));
+    serafimLayer.fillStyle = live ? '#fff3cc' : '#eeae69';
+    serafimLayer.fillRect(0, live ? -7 : -1, beamLength, live ? 14 : 2);
+    serafimLayer.fillStyle = '#ffd573';
+    serafimLayer.fillRect(-2, -2, 4, 4);
+    serafimLayer.restore();
   }
   for (const wave of state.waves) { g.fillStyle = dark; rect(wave.x - 5, wave.y - 5, 10, 10); }
   for (const drone of state.drones) {
