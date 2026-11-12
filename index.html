@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.menu-art,.menu-stars,.menu-flame{animation:none}.game-menu.launching,.game-menu.launching .menu-ship{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V32</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V33</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art"></div><div class="menu-ruins"></div><div class="menu-stars"></div><div class="menu-shade"></div>
 <div class="menu-ship"><img src="art/ship.webp" alt=""><span class="menu-flame"></span></div>
 <div class="menu-content">
@@ -335,7 +335,9 @@ const heavy = e.kind === 1;
 e.x -= speed * (heavy ? .65 : 1) * dt;
 e.y = e.base + Math.sin(e.t * (heavy ? 1.6 : 3)) * sway * (heavy ? .45 : 1);
 e.fire -= dt;
-if (e.fire <= 0) {
+if (heavy) {
+  updateFortressAttack(e, dt);
+} else if (e.fire <= 0) {
   fireEnemyShot(e);
   e.fire = Math.max(.6, 2.2 - level * .06);
 }
@@ -584,6 +586,7 @@ function loadArt(src) {
 }
 const crescentArt = loadArt('art/enemy-crescent.png');
 const crescentShotArt = loadArt('art/Pulse_Impact_Tiro_Meia_Lua_32.png');
+const fortressShotArt = loadArt('art/fortress-shot.png');
 const fortressArt = loadArt('art/enemy-fortress.png');
 const CRESCENT_MUZZLE_X = -3;
 // The visible crescent spans 24 pixels of its 32-pixel source canvas.
@@ -596,14 +599,68 @@ function fireEnemyShot(enemy) {
   hostile.push({x, y, vx: Math.cos(angle) * 200, vy: Math.sin(angle) * 200, crescent});
 }
 
+const FORTRESS_CHARGE = .6;
+const FORTRESS_INTERVAL = 3;
+const FORTRESS_SPREAD = Math.PI / 10;
+const FORTRESS_SHOT_SPEED = 160;
+
+function fortressMuzzles(enemy) {
+  const width = enemy.r * 2.4;
+  const height = width * 153 / 256;
+  const x = Math.round(enemy.x - width / 2) + 2;
+  const top = Math.round(enemy.y - height / 2);
+  return {x, upper: top + height * .36, lower: top + height * .75};
+}
+
+function updateFortressAttack(enemy, dt) {
+  const {x, upper, lower} = fortressMuzzles(enemy);
+  const center = (upper + lower) / 2;
+  if (enemy.charge === undefined) {
+    if (enemy.fire > FORTRESS_CHARGE || x >= canvas.width - 6) return;
+    enemy.aim = Math.atan2(ship.y - center, ship.x - x);
+    enemy.charge = FORTRESS_CHARGE;
+    return;
+  }
+  enemy.charge -= dt;
+  if (enemy.charge > 1e-9) return;
+
+  // Keep the direction captured at the start of the charge.
+  const spread = enemy.aim > -Math.PI / 2 && enemy.aim < Math.PI / 2
+    ? FORTRESS_SPREAD : -FORTRESS_SPREAD;
+  for (const [y, offset] of [[upper, -spread], [center, 0], [lower, spread]]) {
+    const angle = enemy.aim + offset;
+    hostile.push({x, y, vx: Math.cos(angle) * FORTRESS_SHOT_SPEED,
+      vy: Math.sin(angle) * FORTRESS_SHOT_SPEED, fortress: true});
+  }
+  enemy.charge = undefined;
+  enemy.fire = FORTRESS_INTERVAL;
+}
+
+function drawFortressCharge(enemy) {
+  if (enemy.charge === undefined) return;
+  const {x, upper, lower} = fortressMuzzles(enemy);
+  const progress = 1 - enemy.charge / FORTRESS_CHARGE;
+  const size = Math.round(4 + 8 * progress);
+  g.save();
+  for (const y of [upper, lower]) {
+    g.fillStyle = '#a73416';
+    rect(x - size / 2, y - size / 2, size, size);
+    g.fillStyle = '#ffd076';
+    rect(x - size / 4, y - size / 4, size / 2, size / 2);
+  }
+  g.restore();
+}
+
 function drawEnemyShot(shot) {
-  if (shot.crescent && loadedArt(crescentShotArt)) {
+  const art = shot.fortress ? fortressShotArt : shot.crescent ? crescentShotArt : null;
+  if (art && loadedArt(art)) {
     g.save();
     g.imageSmoothingEnabled = false;
     g.translate(shot.x, shot.y);
     g.rotate(Math.atan2(-shot.vy, -shot.vx));
-    const size = CRESCENT_SHOT_SIZE;
-    g.drawImage(crescentShotArt, -size / 2, -size / 2, size, size);
+    const width = shot.fortress ? 20 : CRESCENT_SHOT_SIZE;
+    const height = width * art.naturalHeight / art.naturalWidth;
+    g.drawImage(art, -width / 2, -height / 2, width, height);
     g.restore();
     return;
   }
@@ -814,6 +871,7 @@ drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);dr
     g.imageSmoothingEnabled = false;
     g.drawImage(fortressArt, Math.round(e.x - width / 2), Math.round(e.y - height / 2), width, height);
     g.restore();
+    drawFortressCharge(e);
     continue;
   }
   if (e.kind === 0 && loadedArt(crescentArt)) {
