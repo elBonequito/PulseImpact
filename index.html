@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.menu-art,.menu-stars,.menu-flame{animation:none}.game-menu.launching,.game-menu.launching .menu-ship{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V29</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V32</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art"></div><div class="menu-ruins"></div><div class="menu-stars"></div><div class="menu-shade"></div>
 <div class="menu-ship"><img src="art/ship.webp" alt=""><span class="menu-flame"></span></div>
 <div class="menu-content">
@@ -334,7 +334,12 @@ const sway = Math.min(65, 45 + level * 2);
 const heavy = e.kind === 1;
 e.x -= speed * (heavy ? .65 : 1) * dt;
 e.y = e.base + Math.sin(e.t * (heavy ? 1.6 : 3)) * sway * (heavy ? .45 : 1);
-e.fire-=dt;if(e.fire<=0){const a=Math.atan2(ship.y-e.y,ship.x-e.x);hostile.push({x:e.x+(e.kind===0?CRESCENT_MUZZLE_X:0),y:e.y,vx:Math.cos(a)*200,vy:Math.sin(a)*200});e.fire=Math.max(.6,2.2-level*.06)}for(const b of bullets){if(!b.dead&&Math.hypot(b.x-e.x,b.y-e.y)<e.r+7){b.dead=true;e.hp--;burst(b.x,b.y,3)}}if(e.hp<=0&&!e.dead){e.dead=true;score+=e.kind?500:100;kills++;burst(e.x,e.y,24)}}for(const b of hostile){b.x+=b.vx*dt;b.y+=b.vy*dt}updateSerafim(t);
+e.fire -= dt;
+if (e.fire <= 0) {
+  fireEnemyShot(e);
+  e.fire = Math.max(.6, 2.2 - level * .06);
+}
+for(const b of bullets){if(!b.dead&&Math.hypot(b.x-e.x,b.y-e.y)<e.r+7){b.dead=true;e.hp--;burst(b.x,b.y,3)}}if(e.hp<=0&&!e.dead){e.dead=true;score+=e.kind?500:100;kills++;burst(e.x,e.y,24)}}for(const b of hostile){b.x+=b.vx*dt;b.y+=b.vy*dt}updateSerafim(t);
 if (inv <= 0) {
   const rock = ringRocks(t).find(asteroidTouchesShip);
   const enemy = enemies.find(object => !object.dead && shipTouches(object.x, object.y, object.r));
@@ -578,8 +583,35 @@ function loadArt(src) {
   return image;
 }
 const crescentArt = loadArt('art/enemy-crescent.png');
+const crescentShotArt = loadArt('art/Pulse_Impact_Tiro_Meia_Lua_32.png');
 const fortressArt = loadArt('art/enemy-fortress.png');
 const CRESCENT_MUZZLE_X = -3;
+// The visible crescent spans 24 pixels of its 32-pixel source canvas.
+const CRESCENT_SHOT_SIZE = 32 * 16 / 24;
+function fireEnemyShot(enemy) {
+  const crescent = enemy.kind === 0;
+  const x = enemy.x + (crescent ? CRESCENT_MUZZLE_X : 0);
+  const y = enemy.y;
+  const angle = Math.atan2(ship.y - y, ship.x - x);
+  hostile.push({x, y, vx: Math.cos(angle) * 200, vy: Math.sin(angle) * 200, crescent});
+}
+
+function drawEnemyShot(shot) {
+  if (shot.crescent && loadedArt(crescentShotArt)) {
+    g.save();
+    g.imageSmoothingEnabled = false;
+    g.translate(shot.x, shot.y);
+    g.rotate(Math.atan2(-shot.vy, -shot.vx));
+    const size = CRESCENT_SHOT_SIZE;
+    g.drawImage(crescentShotArt, -size / 2, -size / 2, size, size);
+    g.restore();
+    return;
+  }
+  rect(shot.x - 3, shot.y - 3, 6, 6);
+  g.strokeStyle = dark;
+  g.strokeRect(shot.x - 6, shot.y - 6, 12, 12);
+}
+
 const shipArt = loadArt(artFiles.ship);
 const spaceArt = loadArt(artFiles.space);
 const serafimArt = loadArt(artFiles.serafim);
@@ -774,7 +806,7 @@ for(let x=0;x<=960;x+=6){const edge=j===0?77:426, sign=j===0?1:-1;const y=edge+s
 for(let j=0;j<3;j++){g.strokeStyle=j===1?'#26371d50':'#26371d24';g.lineWidth=1+energy*2;g.beginPath();for(let x=0;x<=960;x+=5){const y=245+Math.sin(x*.012-travel*.012+j*1.7)*(12+energy*85);x?g.lineTo(x,y):g.moveTo(x,y)}g.stroke()}
 g.strokeStyle='#26371d55';g.lineWidth=2;for(const r of rings){g.globalAlpha=Math.max(0,r.t)*.65;g.beginPath();g.ellipse(r.x,240,r.r*.45,r.r,0,0,Math.PI*2);g.stroke()}g.globalAlpha=1;
 for(let i=trail.length-1;i>0;i--){g.globalAlpha=(1-i/trail.length)*energy*.35;g.fillStyle='#df894f';rect(trail[i].x+SHIP_ENGINE-i*drive*4,trail[i].y-2,Math.min(14,i*drive*4),3)}g.globalAlpha=1;
-drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);drawWarp();drawSingularity();drawSerafim(audio.currentTime);g.fillStyle=dark;for(const b of bullets)rect(b.x,b.y-2,16,4);for(const b of hostile){rect(b.x-3,b.y-3,6,6);g.strokeStyle=dark;g.strokeRect(b.x-6,b.y-6,12,12)}for(const e of enemies){
+drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);drawWarp();drawSingularity();drawSerafim(audio.currentTime);g.fillStyle=dark;for(const b of bullets)rect(b.x,b.y-2,16,4);for(const b of hostile)drawEnemyShot(b);for(const e of enemies){
   if (e.kind === 1 && loadedArt(fortressArt)) {
     const width = e.r * 2.4;
     const height = width * fortressArt.naturalHeight / fortressArt.naturalWidth;
