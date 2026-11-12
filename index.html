@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.menu-art,.menu-stars,.menu-flame{animation:none}.game-menu.launching,.game-menu.launching .menu-ship{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V24</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V26</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art"></div><div class="menu-ruins"></div><div class="menu-stars"></div><div class="menu-shade"></div>
 <div class="menu-ship"><img src="art/ship.webp" alt=""><span class="menu-flame"></span></div>
 <div class="menu-content">
@@ -47,7 +47,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 <p class="menu-copy" id="menuControls" hidden>Setas ou WASD para mover. Tiro automático. Espaço para o pulso de defesa. P ou Esc para pausar. No toque, arraste para mover e toque duas vezes para o pulso.</p>
 <label class="menu-copy" id="menuAudio" hidden>Volume <input id="menuVolume" aria-label="Volume da música" type="range" min="0" max="1" step=".05" value=".7"></label>
 <button type="button" class="menu-back" id="menuBack" hidden>← Voltar</button>
-</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><details class="dev-panel"><summary>Painel de desenvolvimento</summary><nav><button id="bossPreview">TESTAR 2:47</button><div class="bar" id="timeline" aria-label="Ir para um setor"><i id="progress"></i></div><button type="button" id="nextSector">PRÓXIMA FASE →</button><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></details></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
+</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><nav aria-label="Timeline e atalhos de fase"><button id="bossPreview">TESTAR 2:47</button><div class="bar" id="timeline" aria-label="Ir para um setor"><i id="progress"></i></div><button type="button" id="nextSector">PRÓXIMA FASE →</button><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('c'),g=canvas.getContext('2d'),audio=$('music');g.imageSmoothingEnabled=false;
 let bassAnalyser,bassBins,bassFilter,bassFloor=0.01,bassPeak=0.03,bassEnv=0,bassRaw=0,drive=1,travel=0,rings=[],trail=[],shock=0;
@@ -498,8 +498,8 @@ function serafimState(time) {
     if (state.attackFrame !== null && state.attackFrame < 6) {
       const live = state.attackFrame >= 4;
       const [tipX, tipY] = serafimScepterTips[state.attackFrame];
-      state.beam = {x: serafimPose.x + tipX * serafimPose.scale,
-        y: serafimPose.y + tipY * serafimPose.scale, live};
+      state.beam = {x: Math.round(serafimPose.x + tipX * serafimPose.scale),
+        y: Math.round(serafimPose.y + tipY * serafimPose.scale), live};
     }
   }
   for (let beat = beatIndex - 8; beat <= beatIndex; beat++) {
@@ -619,7 +619,7 @@ function drawInterceptor() {
 const serafimLayer = $('serafimLayer').getContext('2d');
 serafimLayer.imageSmoothingEnabled = false;
 const serafimPose = {x: 696, y: 85, scale: 256 / 444};
-const serafimScepterTips = [[87,311],[84,289],[51,344],[51,346],[54,342],[69,325]];
+const serafimScepterTips = [[87,311],[84,289],[51,344],[51,346],[53.93,341.51],[66.48,324.55]];
 const serafimAttackArt = loadArt('art/serafim-attack.webp');
 const serafimIdleArt = loadArt('art/serafim-idle.webp');
 function serafimIdleFrame(time) {

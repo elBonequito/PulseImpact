@@ -1,4 +1,4 @@
-# Pulse Impact v24
+# Pulse Impact v26
 
 Jogo de nave em HTML, CSS e JavaScript, com música e artes incluídas.
 
