@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.menu-art,.menu-stars,.menu-flame{animation:none}.game-menu.launching,.game-menu.launching .menu-ship{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V28</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V29</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art"></div><div class="menu-ruins"></div><div class="menu-stars"></div><div class="menu-shade"></div>
 <div class="menu-ship"><img src="art/ship.webp" alt=""><span class="menu-flame"></span></div>
 <div class="menu-content">
@@ -476,6 +476,9 @@ function drawCentipede(time) {
   }
 }
 const SERAFIM = {start: BOSS_START, end: BOSS_END, combatStart: BOSS_START + 8, beatOrigin: 128.39, beatPeriod: .4};
+const serafimAimDuration = .30;
+const serafimWarningDuration = .60;
+const serafimFireDuration = SERAFIM.beatPeriod * .72;
 const droneStations = [[620, 111], [710, 278], [575, 218], [705, 154]];
 const droneDamage = new Map();
 const droneAim = new Map();
@@ -487,17 +490,21 @@ function serafimState(time) {
   const beatTime = (time - SERAFIM.beatOrigin) / SERAFIM.beatPeriod;
   const beatIndex = Math.floor(beatTime);
   const cycle = beatIndex % 8;
-  const beatPhase = beatTime - beatIndex;
   const attackStart = SERAFIM.beatOrigin + (beatIndex - cycle) * SERAFIM.beatPeriod;
+  const attackAge = time - attackStart;
+  const fireAge = attackAge - serafimAimDuration - serafimWarningDuration;
+  const recoveryAge = fireAge - serafimFireDuration;
   if (attackStart >= SERAFIM.combatStart) {
-    if (cycle === 0) state.attackFrame = Math.min(3, Math.floor(beatPhase * 4));
-    else if (cycle === 1 && beatPhase < .72) state.attackFrame = beatPhase < .36 ? 4 : 5;
-    else if (cycle === 1 || (cycle === 2 && beatPhase < .28)) {
-      state.attackFrame = cycle === 1 ? 6 : 7;
+    if (attackAge < serafimAimDuration) {
+      state.attackFrame = Math.min(2, Math.floor(attackAge / serafimAimDuration * 3));
+    } else if (fireAge < 0) {
+      state.attackFrame = 3;
+    } else if (recoveryAge < 0) {
+      state.attackFrame = fireAge < serafimFireDuration / 2 ? 4 : 5;
+    } else if (recoveryAge < SERAFIM.beatPeriod * .56) {
+      state.attackFrame = recoveryAge < SERAFIM.beatPeriod * .28 ? 6 : 7;
     }
-    if (state.attackFrame !== null && state.attackFrame < 6) {
-      state.attackStart = attackStart;
-    }
+    state.attackStart = attackStart;
   }
   for (let beat = beatIndex - 8; beat <= beatIndex; beat++) {
     const launch = SERAFIM.beatOrigin + beat * SERAFIM.beatPeriod;
@@ -645,11 +652,11 @@ function aimSerafim(state, time) {
   if (!serafimAim || (state.attackStart !== undefined && serafimAim.start !== state.attackStart)) {
     serafimAim = {start: state.attackStart, angle: scepterAngle, time, locked: false};
   }
-  if (frame < 4) {
+  if (frame < 3) {
     const delta = target - serafimAim.angle;
     const smoothing = 1 - Math.exp(-18 * Math.max(0, time - serafimAim.time));
     serafimAim.angle += Math.atan2(Math.sin(delta), Math.cos(delta)) * smoothing;
-  } else if (frame < 6 && !serafimAim.locked) {
+  } else if (frame === 3 && !serafimAim.locked) {
     serafimAim.angle = target;
     serafimAim.locked = true;
   }
@@ -661,7 +668,7 @@ function aimSerafim(state, time) {
   const angle = serafimAim.angle + Math.atan2(Math.sin(delta), Math.cos(delta)) * recovery + lift;
   const rotation = angle - scepterAngle;
   state.arm = {rotation, extension};
-  if (frame >= 2 && frame < 6) {
+  if (frame >= 3 && frame < 6 && serafimAim.locked) {
     const dx = Math.cos(angle), dy = Math.sin(angle);
     const cos = Math.cos(rotation), sin = Math.sin(rotation);
     state.beam = {
@@ -723,7 +730,14 @@ function drawSerafim(time) {
     serafimLayer.translate(x, y);
     serafimLayer.rotate(Math.atan2(dy, dx));
     serafimLayer.fillStyle = live ? '#fff3cc' : '#eeae69';
-    serafimLayer.fillRect(0, live ? -7 : -1, beamLength, live ? 14 : 2);
+    if (live) {
+      serafimLayer.fillRect(0, -7, beamLength, 14);
+    } else {
+      serafimLayer.fillRect(0, -1, beamLength, 2);
+      serafimLayer.globalAlpha = .22;
+      serafimLayer.fillRect(0, -7, beamLength, 14);
+      serafimLayer.globalAlpha = 1;
+    }
     serafimLayer.fillStyle = '#ffd573';
     serafimLayer.fillRect(-2, -2, 4, 4);
     serafimLayer.restore();
