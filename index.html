@@ -573,6 +573,7 @@ function loadArt(src) {
   return image;
 }
 const crescentArt = loadArt('art/enemy-crescent.png');
+const fortressArt = loadArt('art/enemy-fortress.png');
 const CRESCENT_MUZZLE_X = -3;
 const shipArt = loadArt(artFiles.ship);
 const spaceArt = loadArt(artFiles.space);
@@ -769,6 +770,15 @@ for(let j=0;j<3;j++){g.strokeStyle=j===1?'#26371d50':'#26371d24';g.lineWidth=1+e
 g.strokeStyle='#26371d55';g.lineWidth=2;for(const r of rings){g.globalAlpha=Math.max(0,r.t)*.65;g.beginPath();g.ellipse(r.x,240,r.r*.45,r.r,0,0,Math.PI*2);g.stroke()}g.globalAlpha=1;
 for(let i=trail.length-1;i>0;i--){g.globalAlpha=(1-i/trail.length)*energy*.35;g.fillStyle='#df894f';rect(trail[i].x+SHIP_ENGINE-i*drive*4,trail[i].y-2,Math.min(14,i*drive*4),3)}g.globalAlpha=1;
 drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);drawWarp();drawSingularity();drawSerafim(audio.currentTime);g.fillStyle=dark;for(const b of bullets)rect(b.x,b.y-2,16,4);for(const b of hostile){rect(b.x-3,b.y-3,6,6);g.strokeStyle=dark;g.strokeRect(b.x-6,b.y-6,12,12)}for(const e of enemies){
+  if (e.kind === 1 && loadedArt(fortressArt)) {
+    const width = e.r * 2.4;
+    const height = width * fortressArt.naturalHeight / fortressArt.naturalWidth;
+    g.save();
+    g.imageSmoothingEnabled = false;
+    g.drawImage(fortressArt, Math.round(e.x - width / 2), Math.round(e.y - height / 2), width, height);
+    g.restore();
+    continue;
+  }
   if (e.kind === 0 && loadedArt(crescentArt)) {
     const width = 34;
     const height = width * crescentArt.naturalHeight / crescentArt.naturalWidth;
