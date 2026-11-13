@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.menu-art,.menu-stars,.menu-flame{animation:none}.game-menu.launching,.game-menu.launching .menu-ship{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V33</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V34</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art"></div><div class="menu-ruins"></div><div class="menu-stars"></div><div class="menu-shade"></div>
 <div class="menu-ship"><img src="art/ship.webp" alt=""><span class="menu-flame"></span></div>
 <div class="menu-content">
@@ -453,6 +453,12 @@ function drawPlanetRing(rocks) {
 const CENTIPEDE_START = 112;
 const CENTIPEDE_COUNT = 7;
 const CENTIPEDE_INTERVAL = 1.9;
+const centipedeArt = ['head', 'body', 'tail'].map(part => loadArt('art/centipede-' + part + '.png'));
+
+function centipedeY(age, enemy, lane) {
+  const cycle = ((age / 1.9 + enemy * .25) % 1 + 1) % 1;
+  return lane + 110 * (1 - Math.abs(2 * cycle - 1));
+}
 function centipedeSegments(time) {
   const segments = [];
   for (let enemy = 0; enemy < CENTIPEDE_COUNT; enemy++) {
@@ -464,9 +470,11 @@ function centipedeSegments(time) {
       if (age < 0) continue;
       const x = 969 - age * 185;
       if (x < -14) continue;
-      const cycle = (age / 1.9 + enemy * .25) % 1;
-      const y = lane + 110 * (1 - Math.abs(2 * cycle - 1));
-      segments.push({x, y, radius: index === 0 ? 12 : 8, head: index === 0});
+      const y = centipedeY(age, enemy, lane);
+      const slope = centipedeY(age - .09, enemy, lane) - centipedeY(age + .09, enemy, lane);
+      const part = index === 0 ? 0 : index === 8 ? 2 : 1;
+      segments.push({x, y, radius: index === 0 ? 12 : 8, head: index === 0,
+        part, angle: Math.atan2(slope, 185 * .18)});
     }
   }
   return segments;
@@ -474,7 +482,21 @@ function centipedeSegments(time) {
 function drawCentipede(time) {
   const segments = centipedeSegments(time);
   for (let index = segments.length - 1; index >= 0; index--) {
-    const {x, y, head} = segments[index];
+    const {x, y, head, part, angle} = segments[index];
+    const art = centipedeArt[part];
+    if (loadedArt(art)) {
+      const width = [56, 44, 49][part];
+      const height = width * art.naturalHeight / art.naturalWidth;
+      const anchorX = [ .61, .5, .28 ][part];
+      const anchorY = [ .55, .49, .51 ][part];
+      g.save();
+      g.imageSmoothingEnabled = false;
+      g.translate(Math.round(x), Math.round(y));
+      g.rotate(angle);
+      g.drawImage(art, -width * anchorX, -height * anchorY, width, height);
+      g.restore();
+      continue;
+    }
     g.fillStyle = '#26371d';
     rect(x - 8, y - 5, head ? 20 : 16, 10);
     rect(x - 4, y - 8, 9, 16);
