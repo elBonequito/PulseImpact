@@ -1,5 +1,6 @@
 <!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PULSE / Equinócio</title><style>
-*{box-sizing:border-box}body{margin:0;background:#10140e;color:#c3d490;font:14px monospace;display:flex;min-height:100vh;align-items:center;justify-content:center}main{width:min(1100px,96vw)}header{display:flex;justify-content:space-between;align-items:center;margin:20px 0}h1{font-size:25px;letter-spacing:8px;margin:0}small{color:#7f8e68;letter-spacing:2px}.shell{padding:18px;background:#303a29;border:1px solid #63714b;border-radius:18px;box-shadow:0 30px 100px #0008}.screen{position:relative;background:#a8bb79;overflow:hidden;border:5px solid #171e13;border-radius:5px}canvas{width:100%;display:block;image-rendering:pixelated;touch-action:none}.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#a8bb79eF;color:#202c19;text-align:center;padding:20px}.overlay h2{font-size:clamp(26px,6vw,64px);letter-spacing:8px;margin:0 0 12px}.overlay p{max-width:460px;line-height:1.7}button{font:inherit;background:#202c19;color:#d0dfa8;border:1px solid #718553;padding:13px 23px;cursor:pointer}button:hover{background:#3c502c}footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0;color:#8d9e72}nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}nav button{padding:8px 14px}.bar{flex:1;min-width:120px;height:5px;background:#1c2417}.bar i{display:block;height:100%;background:#bfd38e;width:0}input{accent-color:#bed28b;width:80px}.tag{font-size:11px;border:1px solid #536243;padding:6px}#touch{display:none}@media(pointer:coarse){#touch{display:block}footer{font-size:11px}}
+@font-face{font-family:"Pulse Serif";src:url("art/menu-serif.ttf") format("truetype");font-weight:400 700;font-display:swap}
+*{box-sizing:border-box}body{margin:0;background:#10140e;color:#c3d490;font:14px "Pulse Serif", serif;display:flex;min-height:100vh;align-items:center;justify-content:center}main{width:min(1100px,96vw)}header{display:flex;justify-content:space-between;align-items:center;margin:20px 0}h1{font-size:25px;letter-spacing:8px;margin:0}small{color:#7f8e68;letter-spacing:2px}.shell{padding:18px;background:#303a29;border:1px solid #63714b;border-radius:18px;box-shadow:0 30px 100px #0008}.screen{position:relative;background:#a8bb79;overflow:hidden;border:5px solid #171e13;border-radius:5px}canvas{width:100%;display:block;image-rendering:pixelated;touch-action:none}.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#a8bb79eF;color:#202c19;text-align:center;padding:20px}.overlay h2{font-size:clamp(26px,6vw,64px);letter-spacing:8px;margin:0 0 12px}.overlay p{max-width:460px;line-height:1.7}button{font:inherit;background:#202c19;color:#d0dfa8;border:1px solid #718553;padding:13px 23px;cursor:pointer}button:hover{background:#3c502c}footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0;color:#8d9e72}nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}nav button{padding:8px 14px}.bar{flex:1;min-width:120px;height:5px;background:#1c2417}.bar i{display:block;height:100%;background:#bfd38e;width:0}input{accent-color:#bed28b;width:80px}.tag{font-size:11px;border:1px solid #536243;padding:6px}#touch{display:none}@media(pointer:coarse){#touch{display:block}footer{font-size:11px}}
 
 .sector-tick{position:absolute;top:-6px;width:10px;height:16px;padding:0;transform:translateX(-50%);background:transparent;border:0;border-left:2px solid #e4efc2}
 .sector-tick:hover,.sector-tick:focus-visible{border-left-color:#ffc96d;outline:1px solid #ffc96d}
@@ -9,38 +10,27 @@
 body{background:#110d15;color:#d8c49a}header,footer{color:#a8b987} .shell{background:#24201e;border-color:#5b4d37}
 .screen{background:#130e17;border-color:#2c2425}
 .game-menu.overlay{display:block;z-index:3;padding:0;text-align:left;color:#ead8ad;background:#150f19;overflow:hidden}
-.menu-art,.menu-ruins,.menu-stars,.menu-shade{position:absolute;inset:0;pointer-events:none}
-.menu-art{background:url('art/space.webp') center/cover;transform:scale(1.05);animation:orbit 24s ease-in-out infinite alternate}
-.menu-ruins{background:url('art/menu-cathedral.webp') center/cover;transform:scaleX(-1);mask-image:linear-gradient(to right,#000 7%,#000d 37%,transparent 66%);opacity:.91}
-.menu-stars{background-image:radial-gradient(circle,#dfc48d 1px,transparent 1.4px),radial-gradient(circle,#deab7a 1px,transparent 1.4px);background-size:109px 87px,151px 113px;opacity:.32;animation:drift 24s linear infinite}
-.menu-shade{background:linear-gradient(90deg,#110c16 0%,#110c16ea 29%,#110c1666 55%,transparent 75%)}
-.menu-ship{position:absolute;left:46%;top:66%;width:32%;image-rendering:pixelated;transform:rotate(-8deg);filter:drop-shadow(0 4px 16px #000);pointer-events:none}
-.menu-ship img{display:block;width:100%}
-.menu-flame{position:absolute;left:2%;top:50%;height:7%;width:12%;background:#f7a451;filter:blur(6px);animation:engine .48s ease-in-out infinite alternate}
+.menu-art{position:absolute;inset:0;pointer-events:none;background:url('art/menu-roses.gif') center right/cover no-repeat}
+.game-menu.home .menu-content h2{background:url('art/menu-logo.png') left center/contain no-repeat;color:transparent;text-shadow:none;letter-spacing:0;width:100%;max-width:420px;aspect-ratio:420/138;font-size:0}
+@media(prefers-reduced-motion:reduce){.menu-art{background-image:url('art/menu-pilot.png')}}
 .menu-content{position:relative;z-index:1;padding:clamp(12px,4vw,54px);width:58%;height:100%;display:flex;flex-direction:column;justify-content:center}
-.game-menu h2{margin:0 0 clamp(8px,2vw,24px);font:bold clamp(25px,5.2vw,68px)/.87 Georgia,serif;letter-spacing:.085em;color:#e0bf78;text-shadow:0 3px #543724,0 0 22px #91644377}
+.game-menu h2{margin:0 0 clamp(8px,2vw,24px);font:bold clamp(25px,5.2vw,68px)/.87 "Pulse Serif", serif;letter-spacing:.085em;color:#e0bf78;text-shadow:0 3px #543724,0 0 22px #91644377}
 .menu-options{display:grid;gap:3px;max-width:300px}
-.menu-options button,.menu-back{position:relative;text-align:left;border:1px solid transparent;background:transparent;color:#e8d7b1;padding:clamp(5px,1.05vw,12px) 12px clamp(5px,1.05vw,12px) 33px;font:700 clamp(12px,1.7vw,20px) monospace}
+.menu-options button,.menu-back{position:relative;text-align:left;border:1px solid transparent;background:transparent;color:#e8d7b1;padding:clamp(5px,1.05vw,12px) 12px clamp(5px,1.05vw,12px) 33px;font:400 clamp(12px,1.7vw,20px) "Pulse Serif", serif;text-transform:uppercase;letter-spacing:.13em}
 .menu-options button:hover,.menu-options button[aria-current=true]{border-color:#91744b;background:#7b5b302e;color:#ffe6aa}
 .menu-options button[aria-current=true]::before{content:'☾';position:absolute;left:11px;color:#f1ca76}
 button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid #f1ca76;outline-offset:2px}
 .menu-copy{font-size:clamp(11px,1.55vw,16px);line-height:1.5;margin:0 0 8px}
 .game-menu.paused{background:#100c16b8}
-.game-menu.paused .menu-art,.game-menu.paused .menu-ruins,.game-menu.paused .menu-stars,.game-menu.paused .menu-shade,.game-menu.paused .menu-ship{display:none}
-.game-menu.launching .menu-ship{animation:launch .62s cubic-bezier(.4,0,.9,.7) forwards}
+.game-menu.paused .menu-art{display:none}
 .game-menu.launching .menu-content{opacity:0;transition:opacity .18s}
 .game-menu.launching{animation:depart .62s ease-in forwards}
 .dev-panel{color:#a9ba88;margin:9px 0 0}.dev-panel summary{cursor:pointer}.dev-panel nav{margin-top:8px}
-@keyframes orbit{to{transform:scale(1.10) translateX(-1%)}}
-@keyframes drift{to{background-position:-109px 87px,-151px 113px}}
-@keyframes engine{to{opacity:.42;transform:scaleX(.7)}}
-@keyframes launch{to{transform:translate(116%,-90%) rotate(-12deg) scale(.22);opacity:0}}
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
-@media(prefers-reduced-motion:reduce){.menu-art,.menu-stars,.menu-flame{animation:none}.game-menu.launching,.game-menu.launching .menu-ship{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V38</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
-<div class="menu-art"></div><div class="menu-ruins"></div><div class="menu-stars"></div><div class="menu-shade"></div>
-<div class="menu-ship"><img src="art/ship.webp" alt=""><span class="menu-flame"></span></div>
+@media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V40</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+<div class="menu-art" aria-hidden="true"></div>
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
 <div class="menu-options" id="menuOptions" aria-label="Opções do jogo"></div>
@@ -74,38 +64,28 @@ function stopShotSound() {
 }
 
 function initShotSound() {
-  shotSound = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .36), ctx.sampleRate);
+  shotSound = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .098), ctx.sampleRate);
   const samples = shotSound.getChannelData(0);
   for (let i = 0; i < samples.length; i++) {
-    const t = i / ctx.sampleRate;
-    const pulse = Math.floor(t / .1);
-    const age = t - pulse * .1;
-    if (pulse >= 3 || age >= .098) continue;
+    const age = i / ctx.sampleRate;
     const envelope = Math.min(1, age / .002, (.098 - age) / .012) * Math.exp(-32 * age);
     const body = .48 * Math.sin(2 * Math.PI * (167 * age - 220 * age * age));
     const attack = .25 * Math.exp(-85 * age) * Math.sin(2 * Math.PI * (960 * age - 3600 * age * age));
     samples[i] = envelope * (body + attack);
   }
-  const bass = ctx.createBiquadFilter();
-  bass.type = 'peaking';
-  bass.frequency.value = 150;
-  bass.Q.value = 1.8;
-  bass.gain.value = 2.5;
   shotGain = ctx.createGain();
-  bass.connect(shotGain).connect(ctx.destination);
+  shotGain.connect(ctx.destination);
   shotGain.gain.value = audio.muted ? 0 : audio.volume * .48;
   audio.addEventListener('volumechange', () => {
     shotGain.gain.value = audio.muted ? 0 : audio.volume * .48;
   });
-  return bass;
 }
 
-let shotFilter;
 function playShotSound() {
-  if (!shotFilter || shotVoice || audio.muted || audio.volume === 0) return;
+  if (!shotGain || audio.muted || audio.volume === 0) return;
   const voice = ctx.createBufferSource();
   voice.buffer = shotSound;
-  voice.connect(shotFilter);
+  voice.connect(shotGain);
   voice.onended = () => {
     voice.disconnect();
     if (shotVoice === voice) shotVoice = null;
@@ -114,7 +94,7 @@ function playShotSound() {
   voice.start();
 }
 
-function initAudio(){if(ctx)return;ctx=new AudioContext();shotFilter=initShotSound();source=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=2048;source.connect(analyser);analyser.connect(ctx.destination);bins=new Uint8Array(analyser.frequencyBinCount);
+function initAudio(){if(ctx)return;ctx=new AudioContext();initShotSound();source=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=2048;source.connect(analyser);analyser.connect(ctx.destination);bins=new Uint8Array(analyser.frequencyBinCount);
 bassFilter=ctx.createBiquadFilter();bassFilter.type='lowpass';bassFilter.frequency.value=160;bassFilter.Q.value=.707;
 bassAnalyser=ctx.createAnalyser();bassAnalyser.fftSize=2048;bassBins=new Float32Array(bassAnalyser.fftSize);
 source.connect(bassFilter);bassFilter.connect(bassAnalyser)}
@@ -133,6 +113,7 @@ function showMenu(page, message = '') {
   const overlay = $('overlay');
   overlay.style.display = '';
   overlay.classList.remove('launching');
+  overlay.classList.toggle('home', page === 'home');
   overlay.classList.toggle('paused', page === 'pause' || page === 'result');
   $('title').textContent = page === 'pause' ? 'Em suspensão' : page === 'controls' ? 'Controles' :
     page === 'audio' ? 'Áudio' : page === 'result' ? message : 'PULSE IMPACT';
@@ -450,7 +431,7 @@ const pull=(t<171?Math.sin(entry*Math.PI*.5):.22)*exit;
 g.save();g.strokeStyle=dark;g.fillStyle=dark;
 if(t<167||t>=304){const cx=775,cy=240;for(let i=0;i<11;i++){const r=22+i*19+(travel*.5)%19;g.globalAlpha=(1-i/12)*pull;g.lineWidth=2+energy*3;g.beginPath();g.ellipse(cx,cy,r*.8,r*.55,t*.7+i*.2,0,Math.PI*2);g.stroke()}g.globalAlpha=pull;g.beginPath();g.ellipse(cx,cy,25+entry*65,25+entry*65,0,0,Math.PI*2);g.fill();g.globalAlpha=1;}
 g.restore();
-if(t>=304){g.fillStyle=dark;g.fillRect(250,185,490,90);g.fillStyle=bg;g.textAlign='center';g.font='bold 24px monospace';g.fillText('SINGULARIDADE SUPERADA',495,223);g.font='14px monospace';g.fillText('05:04 / +5000 PONTOS',495,253);g.textAlign='left';}
+if(t>=304){g.fillStyle=dark;g.fillRect(250,185,490,90);g.fillStyle=bg;g.textAlign='center';g.font='bold 24px "Pulse Serif", serif';g.fillText('SINGULARIDADE SUPERADA',495,223);g.font='14px "Pulse Serif", serif';g.fillText('05:04 / +5000 PONTOS',495,253);g.textAlign='left';}
 }
 function drawEntryPulse(){const t=audio.currentTime;if(t<162||t>=163)return;const progress=Math.max(0,Math.min(1,t-162));g.save();g.strokeStyle=dark;g.globalAlpha=1-progress;g.lineWidth=10*(1-progress)+2;g.beginPath();g.arc(entryPulseX,entryPulseY,progress*1400,0,Math.PI*2);g.stroke();g.lineWidth=3;g.beginPath();g.arc(entryPulseX,entryPulseY,Math.max(0,progress*1400-30),0,Math.PI*2);g.stroke();g.restore();}
 function drawWarp(){
@@ -1049,7 +1030,7 @@ function drawSerafim(time) {
   }
   for (const shot of state.shots) { g.fillStyle = '#f080a8'; rect(shot.x - 5, shot.y - 2, 10, 4); }
   g.fillStyle = dark; rect(390, 51, 180, 24);
-  g.fillStyle = bg; g.textAlign = 'center'; g.font = 'bold 14px monospace';
+  g.fillStyle = bg; g.textAlign = 'center'; g.font = 'bold 14px "Pulse Serif", serif';
   g.fillText('SERAFIM / '+fmt(BOSS_END-time), 480, 68); g.textAlign = 'left';
 }
 
@@ -1094,8 +1075,8 @@ for (const p of particles) {
   rect(p.x, p.y, p.color ? 2 : 3, p.color ? 2 : 3);
 }
 if(phase>0&&phase<.5){g.strokeStyle=dark;g.lineWidth=3;g.beginPath();g.arc(ship.x,ship.y,(.5-phase)*1700,0,Math.PI*2);g.stroke()}
-drawEntryPulse();g.fillStyle=dark;g.fillRect(0,0,960,38);g.fillStyle=bg;g.font='bold 15px monospace';g.fillText('PULSE / '+String(level).padStart(2,'0'),18,25);g.fillText('SCORE '+String(score).padStart(7,'0'),200,25);g.fillText('CASCO ∞ INVENCÍVEL',490,25);g.fillText(automaticFire ? 'TIRO AUTOMÁTICO' : 'TIRO MANUAL', 315, 25);g.fillText(cooldown>0?'PULSO '+Math.ceil(cooldown)+'s':'PULSO PRONTO',735,25);
-if(phase>.6&&!(audio.currentTime>=162&&audio.currentTime<176)&&!bossMode&&!(audio.currentTime>=304&&audio.currentTime<307)){g.fillStyle=dark;g.fillRect(300,185,420,70);g.fillStyle=bg;g.textAlign='center';g.font='bold 23px monospace';g.fillText('SETOR '+level+' / '+names[(level-1)%5]+' / '+drive.toFixed(1)+'×',510,228);g.textAlign='left'}g.fillStyle=dark;g.font='12px monospace';g.fillText('BASS / 20–160 Hz',18,466);g.strokeStyle=dark;g.strokeRect(158,456,125,8);g.fillRect(160,458,121*energy,4);g.fillText('WARP '+drive.toFixed(1)+'×',800,466);
+drawEntryPulse();g.fillStyle=dark;g.fillRect(0,0,960,38);g.fillStyle=bg;g.font='bold 15px "Pulse Serif", serif';g.fillText('PULSE / '+String(level).padStart(2,'0'),18,25);g.fillText('SCORE '+String(score).padStart(7,'0'),200,25);g.fillText('CASCO ∞ INVENCÍVEL',490,25);g.fillText(automaticFire ? 'TIRO AUTOMÁTICO' : 'TIRO MANUAL', 315, 25);g.fillText(cooldown>0?'PULSO '+Math.ceil(cooldown)+'s':'PULSO PRONTO',735,25);
+if(phase>.6&&!(audio.currentTime>=162&&audio.currentTime<176)&&!bossMode&&!(audio.currentTime>=304&&audio.currentTime<307)){g.fillStyle=dark;g.fillRect(300,185,420,70);g.fillStyle=bg;g.textAlign='center';g.font='bold 23px "Pulse Serif", serif';g.fillText('SETOR '+level+' / '+names[(level-1)%5]+' / '+drive.toFixed(1)+'×',510,228);g.textAlign='left'}g.fillStyle=dark;g.font='12px "Pulse Serif", serif';g.fillText('BASS / 20–160 Hz',18,466);g.strokeStyle=dark;g.strokeRect(158,456,125,8);g.fillRect(160,458,121*energy,4);g.fillText('WARP '+drive.toFixed(1)+'×',800,466);
 const palette=smooth(166,173,audio.currentTime)*(1-smooth(304,309,audio.currentTime));canvas.style.filter='invert('+palette+')';g.fillStyle='#26371d0a';for(let y=0;y<480;y+=4)g.fillRect(0,y,960,1);}
 const RADIO_START = 71, RADIO_END = 110;
 const radioLines = [
@@ -1159,9 +1140,9 @@ function drawRadio() {
     g.fillStyle = '#b7c896';
     g.fillRect(9, 12 + (frame * 3 % 76), 80, 2);
   }
-  g.fillStyle = '#e2edbc'; g.textAlign = 'left'; g.font = 'bold 14px monospace';
+  g.fillStyle = '#e2edbc'; g.textAlign = 'left'; g.font = 'bold 14px "Pulse Serif", serif';
   g.fillText(unknown ? 'SINAL DESCONHECIDO' : 'PILOTO', 104, 28);
-  g.font = '14px monospace';
+  g.font = '14px "Pulse Serif", serif';
   let row = '', y = 53;
   for (const word of words.split(' ')) {
     const next = row ? row + ' ' + word : word;
