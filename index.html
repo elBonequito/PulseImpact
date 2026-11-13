@@ -44,7 +44,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
 <div class="menu-options" id="menuOptions" aria-label="Opções do jogo"></div>
-<p class="menu-copy" id="menuControls" hidden>Setas ou WASD para mover. Tiro automático. Espaço para o pulso de defesa. P ou Esc para pausar. No toque, arraste para mover e toque duas vezes para o pulso.</p>
+<p class="menu-copy" id="menuControls" hidden>Setas ou WASD para mover. T alterna entre tiro automático e manual. No manual, pressione ou segure F para atirar. Espaço para o pulso de defesa. P ou Esc para pausar. No toque, arraste para mover e toque duas vezes para o pulso.</p>
 <label class="menu-copy" id="menuAudio" hidden>Volume <input id="menuVolume" aria-label="Volume da música" type="range" min="0" max="1" step=".05" value=".7"></label>
 <button type="button" class="menu-back" id="menuBack" hidden>← Voltar</button>
 </div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><nav aria-label="Timeline e atalhos de fase"><button id="bossPreview">TESTAR 2:47</button><div class="bar" id="timeline" aria-label="Ir para um setor"><i id="progress"></i></div><button type="button" id="nextSector">PRÓXIMA FASE →</button><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
@@ -61,7 +61,60 @@ let ctx,analyser,bins,source,playing=false,started=false,last=0,shot=0,spawn=0,b
 let ship={x:110,y:240,tilt:0,flash:0},enemies=[],bullets=[],hostile=[],particles=[],keys={},pointer=null;const dark='#e4d4aa',bg='#17111a';
 const stars=Array.from({length:90},()=>({x:Math.random()*960,y:Math.random()*480,s:Math.random()*2+1}));
 const names=['PORTADORA','OSCILAÇÃO','INTERFERÊNCIA','RESSONÂNCIA','HIPERESPAÇO'];
-function initAudio(){if(ctx)return;ctx=new AudioContext();source=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=2048;source.connect(analyser);analyser.connect(ctx.destination);bins=new Uint8Array(analyser.frequencyBinCount);
+const FIRE_MODE_KEY = 'pulse-impact-fire-mode';
+let automaticFire = true;
+try { automaticFire = localStorage.getItem(FIRE_MODE_KEY) !== 'manual'; } catch {}
+let fireTap = false, shotSound, shotVoice, shotGain;
+
+function stopShotSound() {
+  if (shotVoice) {
+    shotVoice.stop();
+    shotVoice = null;
+  }
+}
+
+function initShotSound() {
+  shotSound = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .36), ctx.sampleRate);
+  const samples = shotSound.getChannelData(0);
+  for (let i = 0; i < samples.length; i++) {
+    const t = i / ctx.sampleRate;
+    const pulse = Math.floor(t / .1);
+    const age = t - pulse * .1;
+    if (pulse >= 3 || age >= .098) continue;
+    const envelope = Math.min(1, age / .002, (.098 - age) / .012) * Math.exp(-32 * age);
+    const body = .48 * Math.sin(2 * Math.PI * (167 * age - 220 * age * age));
+    const attack = .25 * Math.exp(-85 * age) * Math.sin(2 * Math.PI * (960 * age - 3600 * age * age));
+    samples[i] = envelope * (body + attack);
+  }
+  const bass = ctx.createBiquadFilter();
+  bass.type = 'peaking';
+  bass.frequency.value = 150;
+  bass.Q.value = 1.8;
+  bass.gain.value = 2.5;
+  shotGain = ctx.createGain();
+  bass.connect(shotGain).connect(ctx.destination);
+  shotGain.gain.value = audio.muted ? 0 : audio.volume * .48;
+  audio.addEventListener('volumechange', () => {
+    shotGain.gain.value = audio.muted ? 0 : audio.volume * .48;
+  });
+  return bass;
+}
+
+let shotFilter;
+function playShotSound() {
+  if (!shotFilter || shotVoice || audio.muted || audio.volume === 0) return;
+  const voice = ctx.createBufferSource();
+  voice.buffer = shotSound;
+  voice.connect(shotFilter);
+  voice.onended = () => {
+    voice.disconnect();
+    if (shotVoice === voice) shotVoice = null;
+  };
+  shotVoice = voice;
+  voice.start();
+}
+
+function initAudio(){if(ctx)return;ctx=new AudioContext();shotFilter=initShotSound();source=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=2048;source.connect(analyser);analyser.connect(ctx.destination);bins=new Uint8Array(analyser.frequencyBinCount);
 bassFilter=ctx.createBiquadFilter();bassFilter.type='lowpass';bassFilter.frequency.value=160;bassFilter.Q.value=.707;
 bassAnalyser=ctx.createAnalyser();bassAnalyser.fftSize=2048;bassBins=new Float32Array(bassAnalyser.fftSize);
 source.connect(bassFilter);bassFilter.connect(bassAnalyser)}
@@ -290,6 +343,12 @@ window.addEventListener('keydown', event => {
   if (event.target?.matches?.('input, summary, button')) return;
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Escape'].includes(code)) event.preventDefault();
   if ((code === 'KeyP' || code === 'Escape') && !event.repeat) { pause(); return; }
+  if (code === 'KeyT' && !event.repeat) {
+    automaticFire = !automaticFire;
+    fireTap = false;
+    try { localStorage.setItem(FIRE_MODE_KEY, automaticFire ? 'automatic' : 'manual'); } catch {}
+  }
+  if (code === 'KeyF' && !event.repeat && !automaticFire && playing && !seekingSector) fireTap = true;
   keys[code] = true;
   if (code === 'Space' && !event.repeat) pulse();
 });
@@ -336,10 +395,12 @@ impactVX *= recoilDamping;
 impactVY *= recoilDamping;
 ship.flash = Math.max(0, ship.flash - dt);
 shot -= dt;
-if (shot <= 0 && !(t >= 162 && t < 175)) {
+if (shot <= 0 && !(t >= 162 && t < 175) && (automaticFire || fireTap || keys.KeyF)) {
+  fireTap = false;
   const {x, y} = interceptorMuzzle();
   bullets.push({x, y});
   ship.flash = .055;
+  playShotSound();
   shot = .16 - energy * .055;
 }
 spawn-=dt;if(spawn<=0&&!serafimActive(t)&&!bossMode&&!(t>=RADIO_START&&t<CENTIPEDE_START)&&!(t>=162&&t<BOSS_END)){wave();spawn=Math.max(.9,3.1-level*.08-energy*.7)+(t>=RADIO_START-10&&t<RADIO_START? (t-(RADIO_START-10))*.7:0)}for(const e of enemies){e.t+=dt;const speed = 100 + Math.min(level, 15) * 6 + energy * 50;
@@ -1033,7 +1094,7 @@ for (const p of particles) {
   rect(p.x, p.y, p.color ? 2 : 3, p.color ? 2 : 3);
 }
 if(phase>0&&phase<.5){g.strokeStyle=dark;g.lineWidth=3;g.beginPath();g.arc(ship.x,ship.y,(.5-phase)*1700,0,Math.PI*2);g.stroke()}
-drawEntryPulse();g.fillStyle=dark;g.fillRect(0,0,960,38);g.fillStyle=bg;g.font='bold 15px monospace';g.fillText('PULSE / '+String(level).padStart(2,'0'),18,25);g.fillText('SCORE '+String(score).padStart(7,'0'),200,25);g.fillText('CASCO ∞ INVENCÍVEL',490,25);g.fillText(cooldown>0?'PULSO '+Math.ceil(cooldown)+'s':'PULSO PRONTO',735,25);
+drawEntryPulse();g.fillStyle=dark;g.fillRect(0,0,960,38);g.fillStyle=bg;g.font='bold 15px monospace';g.fillText('PULSE / '+String(level).padStart(2,'0'),18,25);g.fillText('SCORE '+String(score).padStart(7,'0'),200,25);g.fillText('CASCO ∞ INVENCÍVEL',490,25);g.fillText(automaticFire ? 'TIRO AUTOMÁTICO' : 'TIRO MANUAL', 315, 25);g.fillText(cooldown>0?'PULSO '+Math.ceil(cooldown)+'s':'PULSO PRONTO',735,25);
 if(phase>.6&&!(audio.currentTime>=162&&audio.currentTime<176)&&!bossMode&&!(audio.currentTime>=304&&audio.currentTime<307)){g.fillStyle=dark;g.fillRect(300,185,420,70);g.fillStyle=bg;g.textAlign='center';g.font='bold 23px monospace';g.fillText('SETOR '+level+' / '+names[(level-1)%5]+' / '+drive.toFixed(1)+'×',510,228);g.textAlign='left'}g.fillStyle=dark;g.font='12px monospace';g.fillText('BASS / 20–160 Hz',18,466);g.strokeStyle=dark;g.strokeRect(158,456,125,8);g.fillRect(160,458,121*energy,4);g.fillText('WARP '+drive.toFixed(1)+'×',800,466);
 const palette=smooth(166,173,audio.currentTime)*(1-smooth(304,309,audio.currentTime));canvas.style.filter='invert('+palette+')';g.fillStyle='#26371d0a';for(let y=0;y<480;y+=4)g.fillRect(0,y,960,1);}
 const RADIO_START = 71, RADIO_END = 110;
@@ -1045,6 +1106,8 @@ const radioLines = [
 ];
 let radioLine = -1, radioOpen = false;
 function stopRadio() {
+  fireTap = false;
+  stopShotSound();
   radioLine = -1; radioOpen = false;
 }
 function radioNoise() {
