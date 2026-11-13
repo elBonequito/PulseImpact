@@ -30,7 +30,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
 .launch-film{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;background:#000;pointer-events:none}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V59</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V60</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art" aria-hidden="true"></div><video id="launchFilm" class="launch-film" src="art/menu-launch.webm" preload="auto" muted playsinline aria-hidden="true" hidden></video>
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 <p class="menu-copy" id="menuControls" hidden>Setas ou WASD para mover. T alterna entre tiro automático e manual. No manual, pressione ou segure F para atirar. Espaço para o pulso de defesa. P ou Esc para pausar. No toque, arraste para mover e toque duas vezes para o pulso.</p>
 <label class="menu-copy" id="menuAudio" hidden>Volume <input id="menuVolume" aria-label="Volume da música" type="range" min="0" max="1" step=".05" value=".7"></label>
 <button type="button" class="menu-back" id="menuBack" hidden>← Voltar</button>
-</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><nav aria-label="Timeline e atalhos de fase"><button id="bossPreview">TESTAR 2:47</button><div class="bar" id="timeline" aria-label="Ir para um setor"><i id="progress"></i></div><button type="button" id="nextSector">PRÓXIMA FASE →</button><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
+</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><nav aria-label="Progresso da partida"><div class="bar" id="timeline" aria-label="Progresso da música"><i id="progress"></i></div><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('c'),g=canvas.getContext('2d'),audio=$('music');const GAME_WIDTH = 960;
 const renderScale = canvas.width / GAME_WIDTH;
@@ -197,7 +197,7 @@ function playLaunchFilm() {
   });
 }
 async function start(fresh = false, animate = false) {
-  if (openingGame || seekingSector) return;
+  if (openingGame) return;
   openingGame = true;
   const session = ++uiSession;
   const overlay = $('overlay');
@@ -255,100 +255,11 @@ function collideWithObject(object) {
   const ny = distance ? dy / distance : 0;
   impactVX = nx * 420;
   impactVY = ny * 420;
+  hp = Math.max(0, hp - 1);
   inv = .9;
   burst(ship.x, ship.y, 18);
+  if (hp === 0) end();
 }
-let seekingSector = false;
-async function seekSector(seconds) {
-  if (seekingSector) return;
-  seekingSector = true;
-  stopRadio();
-  droneDamage.clear(); droneAim.clear(); serafimFrame = null; serafimAim = null;
-  const nextButton = $('nextSector');
-  nextButton.disabled = true;
-  try {
-    initAudio();
-    const resume = ctx.resume();
-    // Start playback under the click gesture, without calling the game reset.
-    const playback = audio.play();
-    await Promise.all([resume, playback]);
-    if (Math.abs(audio.currentTime - seconds) > .01) {
-      audio.currentTime = seconds;
-      if (audio.seeking) {
-        await new Promise((resolve, reject) => {
-          const abort = new AbortController();
-          const timer = setTimeout(() => finish(new Error('Salto expirado')), 6000);
-          function finish(error) {
-            clearTimeout(timer);
-            abort.abort();
-            if (error) reject(error);
-            else resolve();
-          }
-          audio.addEventListener('seeked', () => finish(), {signal: abort.signal});
-          audio.addEventListener('error', () => finish(new Error('Falha no áudio')), {signal: abort.signal});
-        });
-      }
-    }
-    if (Math.abs(audio.currentTime - seconds) > 1) throw new Error('O áudio não chegou ao marcador');
-    started = true;
-    playing = true;
-    enemies = []; hostile = []; bullets = []; particles = []; rings = []; trail = [];
-    clearWarpEffects(); bossWasActive = false; entryPulseDone = false; spawn = 0;
-    impactVX = impactVY = 0;
-    inv = 0;
-    lastBeat = seconds - 1;
-    phase = 2;
-    showPlaying();
-    $('clock').textContent = fmt(seconds) + ' / ' + fmt(audio.duration || 933);
-    $('progress').style.width = (seconds / (audio.duration || 933) * 100) + '%';
-  } catch (error) {
-    audio.pause();
-    playing = false;
-    showMenu('pause');
-    $('title').textContent = 'Salto interrompido';
-    $('desc').textContent = 'O áudio não conseguiu chegar ao marcador. Clique na fase para tentar novamente.';
-    $('overlay').style.display = '';
-  } finally {
-    seekingSector = false;
-    nextButton.disabled = false;
-  }
-}
-function markSectors() {
-  const timeline = $('timeline');
-  timeline.querySelectorAll('.sector-tick').forEach(button => button.remove());
-  const duration = audio.duration || 933;
-  for (let sector = 1; (sector - 1) * 32 < duration; sector++) {
-    if (sector >= 7 && sector <= 9) continue;
-    const seconds = sector === 10 ? BOSS_END : (sector - 1) * 32;
-    const button = document.createElement('button');
-    const name = names[(sector - 1) % names.length];
-    const label = 'Setor ' + sector + ' · ' + name + ' · ' + fmt(seconds);
-    button.dataset.seconds = String(seconds);
-    button.type = 'button'; button.className = 'sector-tick';
-    button.title = label; button.setAttribute('aria-label', label);
-    button.style.left = (seconds / duration * 100) + '%';
-    button.onclick = () => seekSector(seconds);
-    timeline.appendChild(button);
-  }
-  const bossMarker = document.createElement('button');
-  bossMarker.type = 'button'; bossMarker.className = 'sector-tick';
-  bossMarker.dataset.seconds = String(SERAFIM.start);
-  bossMarker.title = 'Serafim · ' + fmt(SERAFIM.start);
-  bossMarker.setAttribute('aria-label', bossMarker.title);
-  bossMarker.style.left = (SERAFIM.start / duration * 100) + '%';
-  bossMarker.style.borderLeftColor = '#ffc96d';
-  bossMarker.onclick = () => seekSector(SERAFIM.start);
-  timeline.appendChild(bossMarker);
-}
-$('nextSector').onclick = () => {
-  const next = Array.from($('timeline').querySelectorAll('.sector-tick'))
-    .map(button => Number(button.dataset.seconds)).sort((a, b) => a - b)
-    .find(seconds => seconds > audio.currentTime + .05);
-  if (next !== undefined) return seekSector(next);
-};
-audio.addEventListener('loadedmetadata', markSectors);
-document.addEventListener('DOMContentLoaded', markSectors);
-$('bossPreview').onclick = () => seekSector(HYPERSPACE_START);
 $('pause').onclick = () => playing ? pause() : start();
 $('menuBack').onclick = () => showMenu('home');
 function setVolume(value) {
@@ -383,7 +294,7 @@ window.addEventListener('keydown', event => {
     fireTap = false;
     try { localStorage.setItem(FIRE_MODE_KEY, automaticFire ? 'automatic' : 'manual'); } catch {}
   }
-  if (code === 'KeyF' && !event.repeat && !automaticFire && playing && !seekingSector) fireTap = true;
+  if (code === 'KeyF' && !event.repeat && !automaticFire && playing) fireTap = true;
   keys[code] = true;
   if (code === 'Space' && !event.repeat) pulse();
 });
@@ -1346,7 +1257,7 @@ for (const p of particles) {
 }
 drawShipPulse(dropPulse, audio.currentTime);
 drawShipPulse(pulseVisual, audio.currentTime);
-g.fillStyle=dark;g.fillRect(0,0,960,38);g.fillStyle=bg;g.font='bold 15px "Pulse Serif", serif';g.fillText('PULSE / '+String(level).padStart(2,'0'),18,25);g.fillText('SCORE '+String(score).padStart(7,'0'),200,25);g.fillText('CASCO ∞ INVENCÍVEL',490,25);g.fillText(automaticFire ? 'TIRO AUTOMÁTICO' : 'TIRO MANUAL', 315, 25);g.fillText(cooldown>0?'PULSO '+Math.ceil(cooldown)+'s':'PULSO PRONTO',735,25);
+g.fillStyle=dark;g.fillRect(0,0,960,38);g.fillStyle=bg;g.font='bold 15px "Pulse Serif", serif';g.fillText('PULSE / '+String(level).padStart(2,'0'),18,25);g.fillText('SCORE '+String(score).padStart(7,'0'),200,25);g.fillText('CASCO ' + hp + '/5',490,25);g.fillText(automaticFire ? 'TIRO AUTOMÁTICO' : 'TIRO MANUAL', 315, 25);g.fillText(cooldown>0?'PULSO '+Math.ceil(cooldown)+'s':'PULSO PRONTO',735,25);
 if(phase>.6&&!(audio.currentTime>=162&&audio.currentTime<176)&&!bossMode&&!(audio.currentTime>=304&&audio.currentTime<307)){g.fillStyle=dark;g.fillRect(300,185,420,70);g.fillStyle=bg;g.textAlign='center';g.font='bold 23px "Pulse Serif", serif';g.fillText('SETOR '+level+' / '+names[(level-1)%5]+' / '+drive.toFixed(1)+'×',510,228);g.textAlign='left'}g.fillStyle=dark;g.font='12px "Pulse Serif", serif';g.fillText('BASS / 20–160 Hz',18,466);g.strokeStyle=dark;g.strokeRect(158,456,125,8);g.fillRect(160,458,121*energy,4);g.fillText('WARP '+drive.toFixed(1)+'×',800,466);
 const palette=smooth(166,173,audio.currentTime)*(1-smooth(304,309,audio.currentTime));canvas.style.filter='invert('+palette+')';g.fillStyle='#26371d0a';for(let y=0;y<480;y+=4)g.fillRect(0,y,960,1);}
 const RADIO_START = 71, RADIO_END = 110;
@@ -1382,9 +1293,9 @@ function radioNoise() {
 }
 function updateRadio() {
   const t = audio.currentTime;
-  const active = playing && !audio.paused && !seekingSector && !audio.seeking && t >= RADIO_START && t < RADIO_END;
+  const active = playing && !audio.paused && !audio.seeking && t >= RADIO_START && t < RADIO_END;
   const line = active ? radioLines.findLastIndex(cue => t >= cue[0]) : -1;
-  if (active !== radioOpen && playing && !seekingSector && !audio.seeking &&
+  if (active !== radioOpen && playing && !audio.seeking &&
       (active || Math.abs(t - RADIO_END) < .3)) radioNoise();
   radioOpen = active;
   radioLine = line;
@@ -1430,5 +1341,5 @@ function drawRadio() {
   g.restore();
 }
 
-function loop(now){const dt=Math.min(.04,(now-last)/1000||.016);last=now;if(playing&&!seekingSector){update(dt);updateRadio();draw();drawRadio();}requestAnimationFrame(loop)}showMenu('home');requestAnimationFrame(loop);
+function loop(now){const dt=Math.min(.04,(now-last)/1000||.016);last=now;if(playing){update(dt);updateRadio();draw();drawRadio();}requestAnimationFrame(loop)}showMenu('home');requestAnimationFrame(loop);
 </script></html>
