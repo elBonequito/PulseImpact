@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.menu-art,.menu-stars,.menu-flame{animation:none}.game-menu.launching,.game-menu.launching .menu-ship{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V34</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V35</span></header><div class="shell"><div class="screen"><canvas width="960" height="480" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art"></div><div class="menu-ruins"></div><div class="menu-stars"></div><div class="menu-shade"></div>
 <div class="menu-ship"><img src="art/ship.webp" alt=""><span class="menu-flame"></span></div>
 <div class="menu-content">
@@ -55,14 +55,14 @@ const smooth=(a,b,t)=>{const x=Math.max(0,Math.min(1,(t-a)/(b-a)));return x*x*(3
 const warpStars=Array.from({length:180},(_,i)=>({angle:i*2.39996323,seed:(i*.61803398875)%1,weight:1+(i%3)}));
 const BOSS_START=167,BOSS_END=304;let entryPulseDone=false,entryPulseX=110,entryPulseY=240;let bossMode=false,bossWasActive=false;
 let ctx,analyser,bins,source,playing=false,started=false,last=0,shot=0,spawn=0,beat=0,avg=.15,lastBeat=-1,energy=0,score=0,kills=0,level=1,hp=5,inv=0,cooldown=0,phase=0,frame=0;
-let ship={x:110,y:240},enemies=[],bullets=[],hostile=[],particles=[],keys={},pointer=null;const dark='#e4d4aa',bg='#17111a';
+let ship={x:110,y:240,tilt:0},enemies=[],bullets=[],hostile=[],particles=[],keys={},pointer=null;const dark='#e4d4aa',bg='#17111a';
 const stars=Array.from({length:90},()=>({x:Math.random()*960,y:Math.random()*480,s:Math.random()*2+1}));
 const names=['PORTADORA','OSCILAÇÃO','INTERFERÊNCIA','RESSONÂNCIA','HIPERESPAÇO'];
 function initAudio(){if(ctx)return;ctx=new AudioContext();source=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=2048;source.connect(analyser);analyser.connect(ctx.destination);bins=new Uint8Array(analyser.frequencyBinCount);
 bassFilter=ctx.createBiquadFilter();bassFilter.type='lowpass';bassFilter.frequency.value=160;bassFilter.Q.value=.707;
 bassAnalyser=ctx.createAnalyser();bassAnalyser.fftSize=2048;bassBins=new Float32Array(bassAnalyser.fftSize);
 source.connect(bassFilter);bassFilter.connect(bassAnalyser)}
-function reset(){asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
+function reset(){asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240,tilt:0};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
 let menuPage = 'home', menuSelection = 0, openingGame = false, launchTimer = 0, uiSession = 0;
 const menuButtons = () => [...$('menuOptions').querySelectorAll('button')];
 function chooseMenu(index, focus = true) {
@@ -322,7 +322,9 @@ if(bossMode&&!bossWasActive){enemies=[];hostile=[];bullets=[];phase=0}
 if(!bossMode&&bossWasActive){hostile=[];bullets=[];burst(775,242,90);score+=5000;phase=2}
 bossWasActive=bossMode;
 
+const previousShipY = ship.y;
 let dx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0),dy=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);const norm=Math.hypot(dx,dy)||1;if(pointer){ship.x+=(pointer.x-ship.x)*Math.min(1,dt*12);ship.y+=(pointer.y-ship.y)*Math.min(1,dt*12)}else{ship.x+=dx/norm*290*dt;ship.y+=dy/norm*290*dt}ship.x=Math.max(25,Math.min(650,ship.x));ship.y=Math.max(55,Math.min(445,ship.y));
+ship.tilt = interceptorTilt(ship.tilt, ship.y - previousShipY, dt);
 // Integrate recoil alongside the normal controls and damp it over time.
 ship.x = Math.max(25, Math.min(650, ship.x + impactVX * dt));
 ship.y = Math.max(55, Math.min(445, ship.y + impactVY * dt));
@@ -726,19 +728,27 @@ function drawSpace() {
   }
   g.globalAlpha = 1;
 }
+function interceptorTilt(current, verticalTravel, dt) {
+  const maxTilt = 8 * Math.PI / 180;
+  const speedRatio = dt > 0 ? verticalTravel / (dt * 290) : 0;
+  const target = Math.max(-1, Math.min(1, speedRatio)) * maxTilt;
+  return current + (target - current) * (1 - Math.exp(-14 * dt));
+}
+
 function drawInterceptor() {
   if (inv > 0 && Math.floor(inv * 18) % 2 !== 0) return;
-  const x = ship.x, y = ship.y;
-  if (!loadedArt(shipArt)) {
-    g.fillStyle = dark;
-    rect(x - 25, y - 6, 59, 12);
-    return;
-  }
   g.save();
+  g.translate(Math.round(ship.x), Math.round(ship.y));
+  g.rotate(ship.tilt);
   g.imageSmoothingEnabled = false;
-  if (inv > 0) g.filter = 'brightness(2.3)';
-  const height = 70 * shipArt.naturalHeight / shipArt.naturalWidth;
-  g.drawImage(shipArt, Math.round(x - 35), Math.round(y - height * .545), 70, height);
+  if (loadedArt(shipArt)) {
+    if (inv > 0) g.filter = 'brightness(2.3)';
+    const height = 70 * shipArt.naturalHeight / shipArt.naturalWidth;
+    g.drawImage(shipArt, -35, Math.round(-height * .545), 70, height);
+  } else {
+    g.fillStyle = dark;
+    rect(-25, -6, 59, 12);
+  }
   g.restore();
 }
 const serafimLayer = $('serafimLayer').getContext('2d');
