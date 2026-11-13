@@ -62,6 +62,14 @@ const FIRE_MODE_KEY = 'pulse-impact-fire-mode';
 let automaticFire = true;
 try { automaticFire = localStorage.getItem(FIRE_MODE_KEY) !== 'manual'; } catch {}
 let fireTap = false;
+const pulseSound = new Audio('art/pulse.mp3');
+pulseSound.preload = 'auto';
+function playPulseSound() {
+  if (audio.muted || audio.volume === 0) return;
+  pulseSound.volume = audio.volume;
+  pulseSound.currentTime = 0;
+  pulseSound.play().catch(() => {});
+}
 const shotSound = new Audio('art/player-shot.mp3');
 shotSound.preload = 'auto';
 const crescentSounds = Array.from({length: 5}, () => {
@@ -237,7 +245,7 @@ function end(win = false) {
   $('desc').textContent = score.toLocaleString('pt-BR') + ' pontos';
 }
 function burst(x,y,n=12){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*230,vy:(Math.random()-.5)*230,t:.3+Math.random()*.5})}
-function pulse(){if(!playing||cooldown>0||singularityEntrance(audio.currentTime))return;pulseVisual={x:ship.x,y:ship.y,start:audio.currentTime};cooldown=8;hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
+function pulse(){if(!playing||cooldown>0||singularityEntrance(audio.currentTime))return;pulseVisual={x:ship.x,y:ship.y,start:audio.currentTime};cooldown=8;playPulseSound();hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
 let impactVX = 0, impactVY = 0;
 function collideWithObject(object) {
   const dx = ship.x - object.x;
@@ -1293,6 +1301,7 @@ const radioLines = [
 ];
 let radioLine = -1, radioOpen = false;
 function stopRadio() {
+  pulseSound.pause();
   for (const voice of centipedeVoices) {
     voice.sound.pause();
     voice.active = false;
