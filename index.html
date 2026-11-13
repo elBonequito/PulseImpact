@@ -30,7 +30,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
 .launch-film{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;background:#000;pointer-events:none}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V53</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V58</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art" aria-hidden="true"></div><video id="launchFilm" class="launch-film" src="art/menu-launch.webm" preload="auto" muted playsinline aria-hidden="true" hidden></video>
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
@@ -392,6 +392,7 @@ window.addEventListener('blur', () => { if (playing) pause(); });
 let tap=0;canvas.onpointerdown=e=>{if(menuPage!=='game')return;canvas.setPointerCapture(e.pointerId);movePointer(e);if(performance.now()-tap<300)pulse();tap=performance.now()};canvas.onpointermove=e=>{if(menuPage==='game'&&e.buttons)movePointer(e)};canvas.onpointerup=()=>pointer=null;canvas.onpointercancel=()=>pointer=null;function movePointer(e){const r=canvas.getBoundingClientRect();pointer={x:(e.clientX-r.left)/r.width*960,y:(e.clientY-r.top)/r.height*480}}
 function wave(){const y=90+Math.random()*300;const tough=level%4===0;for(let i=0;i<(tough?1:5);i++)enemies.push({x:1000+i*65,y,base:y,t:-i*.28,hp:tough?20:2+Math.floor(level/5),r:tough?35:12,fire:1.2+i*.35,kind:tough?1:0})}
 function update(dt){const t=audio.currentTime;
+updateSerafimImpact(t);
 updateCentipedeAudio(t);
 if (serafimActive(t)) {
   enemies = []; hostile = [];
@@ -503,10 +504,45 @@ function singularityEntrance(time) {
   return time >= HYPERSPACE_START && time < HYPERSPACE_END;
 }
 
-const SERAFIM_REVEAL_END = 173;
-function serafimEntranceFrame(time) {
-  if (time < HYPERSPACE_START || time >= SERAFIM_REVEAL_END) return null;
-  return Math.min(311, Math.floor((time - HYPERSPACE_START) * 24));
+const SERAFIM_OPEN = 173;
+const SERAFIM_REVEAL_END = SERAFIM_OPEN + 1.25;
+let lastSerafimImpactTime = 0;
+
+function updateSerafimImpact(time) {
+  const crossed = lastSerafimImpactTime < SERAFIM_OPEN && time >= SERAFIM_OPEN;
+  lastSerafimImpactTime = time;
+  if (!crossed || time >= SERAFIM_OPEN + .25 || !ctx || ctx.state !== 'running' || audio.muted || !audio.volume) return;
+  const now = ctx.currentTime;
+  const oscillator = ctx.createOscillator();
+  const gain = ctx.createGain();
+  oscillator.frequency.setValueAtTime(101, now);
+  oscillator.frequency.exponentialRampToValueAtTime(34, now + .7);
+  gain.gain.setValueAtTime(.001, now);
+  gain.gain.exponentialRampToValueAtTime(.52 * audio.volume, now + .035);
+  gain.gain.exponentialRampToValueAtTime(.001, now + .82);
+  oscillator.connect(gain).connect(ctx.destination);
+  oscillator.start(now);
+  oscillator.stop(now + .83);
+}
+
+function drawSerafimImpact(time) {
+  const age = time - SERAFIM_OPEN;
+  if (age < 0 || age >= .82) return;
+  const progress = age / .82;
+  g.save();
+  g.globalAlpha = .32 * (1 - smooth(0, .17, age));
+  g.fillStyle = '#fff0bf';
+  g.fillRect(0, 38, 960, 442);
+  g.globalAlpha = .76 * (1 - progress);
+  g.strokeStyle = '#ffd48b';
+  g.lineWidth = 2 + 5 * (1 - progress);
+  const radius = 36 + progress * 610;
+  for (const angle of [-1.9, .65]) {
+    g.beginPath();
+    g.ellipse(824, 206, radius, radius * .65, -.12, angle, angle + 1.55);
+    g.stroke();
+  }
+  g.restore();
 }
 
 function drawSingularity(){
@@ -1170,21 +1206,18 @@ const serafimIdleArt = loadArt('art/serafim-idle.webp');
 function serafimIdleFrame(time) {
   return Math.floor(Math.max(0, time - SERAFIM_REVEAL_END) * 8) % 8;
 }
-const serafimEntranceArt = Array.from({length: 6}, (_, page) =>
-  loadArt('art/serafim-entrada/Serafim_0' + (page + 1) + '.png'));
+const serafimEntranceArt = loadArt('art/serafim-abertura.png');
 
 function drawSerafim(time) {
   serafimLayer.clearRect(0, 0, 960, 480);
-  const entranceFrame = serafimEntranceFrame(time);
-  if (entranceFrame !== null) {
-    const sheet = serafimEntranceArt[Math.floor(entranceFrame / 52)];
-    if (!loadedArt(sheet)) return;
-    const localFrame = entranceFrame % 52;
+  if (time >= BOSS_START && time < SERAFIM_REVEAL_END && loadedArt(serafimEntranceArt)) {
     const cell = 444;
     const {x, y, scale} = serafimPose;
     const size = cell * scale;
-    serafimLayer.drawImage(sheet, localFrame % 8 * cell,
-      Math.floor(localFrame / 8) * cell, cell, cell, x, y, size, size);
+    const approach = 1 - smooth(BOSS_START, SERAFIM_OPEN - 1, time);
+    const pose = time < SERAFIM_OPEN ? 0 : 1 + Math.min(4, Math.floor((time - SERAFIM_OPEN) * 4));
+    serafimLayer.drawImage(serafimEntranceArt, pose * cell, 0,
+      cell, cell, x + (960 - x) * approach, y + Math.sin(time * 3) * 2, size, size);
     return;
   }
   if (!serafimActive(time)) return;
@@ -1255,7 +1288,7 @@ for(let x=0;x<=960;x+=6){const edge=j===0?77:426, sign=j===0?1:-1;const y=edge+s
 for(let j=0;j<3;j++){g.strokeStyle=j===1?'#26371d50':'#26371d24';g.lineWidth=1+energy*2;g.beginPath();for(let x=0;x<=960;x+=5){const y=245+Math.sin(x*.012-travel*.012+j*1.7)*(12+energy*85);x?g.lineTo(x,y):g.moveTo(x,y)}g.stroke()}
 g.strokeStyle='#26371d55';g.lineWidth=2;for(const r of rings){g.globalAlpha=Math.max(0,r.t)*.65;g.beginPath();g.ellipse(r.x,240,r.r*.45,r.r,0,0,Math.PI*2);g.stroke()}g.globalAlpha=1;
 for(let i=trail.length-1;i>0;i--){g.globalAlpha=(1-i/trail.length)*energy*.35;g.fillStyle='#df894f';rect(trail[i].x+SHIP_ENGINE-i*drive*4,trail[i].y-2,Math.min(14,i*drive*4),3)}g.globalAlpha=1;
-drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);drawWarp();drawSingularity();drawSerafim(audio.currentTime);g.fillStyle=dark;for(const b of bullets)drawPlayerShot(b);for(const b of hostile)drawEnemyShot(b);for(const e of enemies){
+drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);drawWarp();drawSingularity();drawSerafimImpact(audio.currentTime);drawSerafim(audio.currentTime);g.fillStyle=dark;for(const b of bullets)drawPlayerShot(b);for(const b of hostile)drawEnemyShot(b);for(const e of enemies){
   if (e.kind === 1 && loadedArt(fortressArt)) {
     const width = e.r * 2.4;
     const height = width * fortressArt.naturalHeight / fortressArt.naturalWidth;
