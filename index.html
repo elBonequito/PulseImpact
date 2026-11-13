@@ -67,8 +67,6 @@ try { automaticFire = localStorage.getItem(FIRE_MODE_KEY) !== 'manual'; } catch 
 let fireTap = false;
 const shotSound = new Audio('art/player-shot.mp3');
 shotSound.preload = 'auto';
-const pulseSound = new Audio('art/pulse-sound.mp3');
-pulseSound.preload = 'auto';
 const crescentSounds = Array.from({length: 5}, () => {
   const sound = new Audio('art/crescent-shot.mp3');
   sound.preload = 'auto';
@@ -82,7 +80,6 @@ const fortressSounds = [1, 2, 3].map(index => {
 
 function stopShotSound() {
   shotSound.pause();
-  pulseSound.pause();
   crescentSounds.forEach(sound => sound.pause());
   fortressSounds.forEach(sound => sound.pause());
 }
@@ -91,8 +88,6 @@ function initShotSound() {
   const syncVolume = () => {
     shotSound.volume = audio.volume * .48;
     shotSound.muted = audio.muted;
-    pulseSound.volume = audio.volume * .4;
-    pulseSound.muted = audio.muted;
     for (const sound of crescentSounds) {
       sound.volume = audio.volume * .18;
       sound.muted = audio.muted;
@@ -104,12 +99,6 @@ function initShotSound() {
   };
   syncVolume();
   audio.addEventListener('volumechange', syncVolume);
-}
-
-function playPulseSound() {
-  if (audio.muted || audio.volume === 0 || pulseSound.readyState < 2) return;
-  pulseSound.currentTime = 0;
-  pulseSound.play().catch(() => {});
 }
 
 function playShotSound() {
@@ -257,7 +246,7 @@ function end(win = false) {
   $('desc').textContent = score.toLocaleString('pt-BR') + ' pontos';
 }
 function burst(x,y,n=12){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*230,vy:(Math.random()-.5)*230,t:.3+Math.random()*.5})}
-function pulse(){if(!playing||cooldown>0||singularityEntrance(audio.currentTime))return;pulseVisual={x:ship.x,y:ship.y,start:audio.currentTime};playPulseSound();cooldown=8;hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
+function pulse(){if(!playing||cooldown>0||singularityEntrance(audio.currentTime))return;pulseVisual={x:ship.x,y:ship.y,start:audio.currentTime};cooldown=8;hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
 let impactVX = 0, impactVY = 0;
 function collideWithObject(object) {
   const dx = ship.x - object.x;
