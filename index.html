@@ -29,8 +29,9 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V46</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
-<div class="menu-art" aria-hidden="true"></div>
+.launch-film{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;background:#000;pointer-events:none}
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V53</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+<div class="menu-art" aria-hidden="true"></div><video id="launchFilm" class="launch-film" src="art/menu-launch.webm" preload="auto" muted playsinline aria-hidden="true" hidden></video>
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
 <div class="menu-options" id="menuOptions" aria-label="Opções do jogo"></div>
@@ -63,6 +64,11 @@ try { automaticFire = localStorage.getItem(FIRE_MODE_KEY) !== 'manual'; } catch 
 let fireTap = false;
 const shotSound = new Audio('art/player-shot.mp3');
 shotSound.preload = 'auto';
+const crescentSounds = Array.from({length: 5}, () => {
+  const sound = new Audio('art/crescent-shot.mp3');
+  sound.preload = 'auto';
+  return sound;
+});
 const fortressSounds = [1, 2, 3].map(index => {
   const sound = new Audio('art/fortress-shot-' + index + '.mp3');
   sound.preload = 'auto';
@@ -71,6 +77,7 @@ const fortressSounds = [1, 2, 3].map(index => {
 
 function stopShotSound() {
   shotSound.pause();
+  crescentSounds.forEach(sound => sound.pause());
   fortressSounds.forEach(sound => sound.pause());
 }
 
@@ -78,6 +85,10 @@ function initShotSound() {
   const syncVolume = () => {
     shotSound.volume = audio.volume * .48;
     shotSound.muted = audio.muted;
+    for (const sound of crescentSounds) {
+      sound.volume = audio.volume * .18;
+      sound.muted = audio.muted;
+    }
     for (const sound of fortressSounds) {
       sound.volume = audio.volume * .22;
       sound.muted = audio.muted;
@@ -98,7 +109,7 @@ bassFilter=ctx.createBiquadFilter();bassFilter.type='lowpass';bassFilter.frequen
 bassAnalyser=ctx.createAnalyser();bassAnalyser.fftSize=2048;bassBins=new Float32Array(bassAnalyser.fftSize);
 source.connect(bassFilter);bassFilter.connect(bassAnalyser)}
 function reset(){clearWarpEffects();asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240,tilt:0,flash:0};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
-let menuPage = 'home', menuSelection = 0, openingGame = false, launchTimer = 0, uiSession = 0;
+let menuPage = 'home', menuSelection = 0, openingGame = false, uiSession = 0;
 const menuButtons = () => [...$('menuOptions').querySelectorAll('button')];
 function chooseMenu(index, focus = true) {
   const buttons = menuButtons();
@@ -140,7 +151,6 @@ function showMenu(page, message = '') {
 }
 function goHome() {
   uiSession++;
-  clearTimeout(launchTimer);
   openingGame = false;
   audio.pause(); playing = false; started = false;
   keys = {}; pointer = null;
@@ -158,28 +168,65 @@ function showPlaying() {
   $('pause').textContent = 'Ⅱ PAUSAR';
   document.activeElement?.blur();
 }
+function playLaunchFilm() {
+  const film = $('launchFilm');
+  film.currentTime = 0;
+  film.hidden = false;
+  $('overlay').inert = true;
+  menuPage = 'launch';
+  return new Promise(resolve => {
+    function finish() {
+      clearTimeout(timeout);
+      film.removeEventListener('ended', finish);
+      film.removeEventListener('error', finish);
+      film.pause();
+      resolve();
+    }
+    const timeout = setTimeout(finish, 7000);
+    film.addEventListener('ended', finish);
+    film.addEventListener('error', finish);
+    film.play().catch(finish);
+  });
+}
 async function start(fresh = false, animate = false) {
   if (openingGame || seekingSector) return;
   openingGame = true;
   const session = ++uiSession;
+  const overlay = $('overlay');
+  const film = $('launchFilm');
   try {
     initAudio();
+    const audioReady = ctx.resume();
     if (fresh || !started || hp <= 0 || audio.ended) reset();
-    await Promise.all([ctx.resume(), audio.play()]);
-    if (session !== uiSession) return;
-    started = true; playing = true; keys = {}; pointer = null;
     if (animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      menuPage = 'launch';
-      $('overlay').classList.add('launching');
-      launchTimer = setTimeout(() => { if (session === uiSession) showPlaying(); }, 620);
-    } else showPlaying();
+      await Promise.all([audioReady, playLaunchFilm()]);
+    } else await audioReady;
+    if (session !== uiSession) return;
+    // Render the starting position before revealing the arena or advancing the simulation.
+    if (fresh) draw();
+    await audio.play();
+    if (session !== uiSession) return;
+    started = true;
+    keys = {};
+    pointer = null;
+    showPlaying();
+    playing = true;
   } catch {
-    if (session === uiSession) $('desc').textContent = 'Não foi possível iniciar o áudio. Tente novamente.';
-  } finally { if (session === uiSession) openingGame = false; }
+    if (session === uiSession) {
+      audio.pause();
+      if (menuPage === 'launch') showMenu('home');
+      $('desc').textContent = 'Não foi possível iniciar o áudio. Tente novamente.';
+    }
+  } finally {
+    if (session === uiSession) {
+      film.hidden = true;
+      overlay.inert = false;
+      openingGame = false;
+    }
+  }
 }
 function pause() {
-  if (!playing || (menuPage !== 'game' && menuPage !== 'launch')) return;
-  clearTimeout(launchTimer);
+  if (!playing || menuPage !== 'game') return;
   audio.pause(); playing = false; keys = {}; pointer = null;
   stopRadio();
   showMenu('pause');
@@ -337,6 +384,7 @@ window.addEventListener('blur', () => { if (playing) pause(); });
 let tap=0;canvas.onpointerdown=e=>{if(menuPage!=='game')return;canvas.setPointerCapture(e.pointerId);movePointer(e);if(performance.now()-tap<300)pulse();tap=performance.now()};canvas.onpointermove=e=>{if(menuPage==='game'&&e.buttons)movePointer(e)};canvas.onpointerup=()=>pointer=null;canvas.onpointercancel=()=>pointer=null;function movePointer(e){const r=canvas.getBoundingClientRect();pointer={x:(e.clientX-r.left)/r.width*960,y:(e.clientY-r.top)/r.height*480}}
 function wave(){const y=90+Math.random()*300;const tough=level%4===0;for(let i=0;i<(tough?1:5);i++)enemies.push({x:1000+i*65,y,base:y,t:-i*.28,hp:tough?20:2+Math.floor(level/5),r:tough?35:12,fire:1.2+i*.35,kind:tough?1:0})}
 function update(dt){const t=audio.currentTime;
+updateCentipedeAudio(t);
 if (serafimActive(t)) {
   enemies = []; hostile = [];
 }
@@ -447,12 +495,10 @@ function singularityEntrance(time) {
   return time >= HYPERSPACE_START && time < HYPERSPACE_END;
 }
 
+const SERAFIM_REVEAL_END = 173;
 function serafimEntranceFrame(time) {
-  if (!singularityEntrance(time)) return null;
-  const beforeDrop = time < BOSS_START;
-  const start = beforeDrop ? HYPERSPACE_START : BOSS_START;
-  const end = beforeDrop ? BOSS_START : HYPERSPACE_END;
-  return (beforeDrop ? 0 : 4) + Math.min(3, Math.floor(4 * (time - start) / (end - start)));
+  if (time < HYPERSPACE_START || time >= SERAFIM_REVEAL_END) return null;
+  return Math.min(311, Math.floor((time - HYPERSPACE_START) * 24));
 }
 
 function drawSingularity(){
@@ -564,6 +610,31 @@ const CENTIPEDE_START = 112;
 const CENTIPEDE_COUNT = 7;
 const CENTIPEDE_INTERVAL = 1.9;
 const centipedeArt = ['head', 'body', 'tail'].map(part => loadArt('art/centipede-' + part + '.png'));
+
+const CENTIPEDE_AUDIO_DURATION = 7.344;
+const centipedeVoices = Array.from({length: CENTIPEDE_COUNT}, () => {
+  const sound = new Audio('art/centipede-pass.mp3');
+  sound.preload = 'auto';
+  return {sound, active: false};
+});
+
+function updateCentipedeAudio(time) {
+  centipedeVoices.forEach((voice, index) => {
+    const age = time - CENTIPEDE_START - index * CENTIPEDE_INTERVAL;
+    const {sound} = voice;
+    if (age < 0 || age >= CENTIPEDE_AUDIO_DURATION) {
+      if (voice.active) sound.pause();
+      voice.active = false;
+      return;
+    }
+    sound.volume = audio.volume * .23;
+    sound.muted = audio.muted;
+    if (voice.active || sound.readyState < 2) return;
+    sound.currentTime = age;
+    voice.active = true;
+    sound.play().catch(() => {});
+  });
+}
 
 function centipedeY(age, enemy, lane) {
   const cycle = ((age / 1.9 + enemy * .25) % 1 + 1) % 1;
@@ -817,6 +888,13 @@ function fireEnemyShot(enemy) {
   const y = enemy.y;
   const angle = Math.atan2(ship.y - y, ship.x - x);
   hostile.push({x, y, vx: Math.cos(angle) * 200, vy: Math.sin(angle) * 200, crescent});
+  if (crescent && !audio.muted && audio.volume > 0) {
+    const sound = crescentSounds.find(clip => (clip.paused || clip.ended) && clip.readyState >= 2);
+    if (sound) {
+      sound.currentTime = 0;
+      sound.play().catch(() => {});
+    }
+  }
 }
 
 const FORTRESS_CHARGE = .6;
@@ -1082,26 +1160,29 @@ function serafimBeamHitsShip(beam) {
 }
 const serafimIdleArt = loadArt('art/serafim-idle.webp');
 function serafimIdleFrame(time) {
-  return Math.floor(Math.max(0, time - BOSS_START) * 8) % 8;
+  return Math.floor(Math.max(0, time - SERAFIM_REVEAL_END) * 8) % 8;
 }
-const serafimEntranceArt = loadArt('art/serafim-entrance.png');
+const serafimEntranceArt = Array.from({length: 6}, (_, page) =>
+  loadArt('art/serafim-entrada/Serafim_0' + (page + 1) + '.png'));
 
 function drawSerafim(time) {
   serafimLayer.clearRect(0, 0, 960, 480);
   const entranceFrame = serafimEntranceFrame(time);
-  if (entranceFrame !== null && loadedArt(serafimEntranceArt)) {
+  if (entranceFrame !== null) {
+    const sheet = serafimEntranceArt[Math.floor(entranceFrame / 52)];
+    if (!loadedArt(sheet)) return;
+    const localFrame = entranceFrame % 52;
     const cell = 444;
     const {x, y, scale} = serafimPose;
     const size = cell * scale;
-    serafimLayer.drawImage(serafimEntranceArt, entranceFrame % 4 * cell,
-      Math.floor(entranceFrame / 4) * cell, cell, cell, x, y, size, size);
+    serafimLayer.drawImage(sheet, localFrame % 8 * cell,
+      Math.floor(localFrame / 8) * cell, cell, cell, x, y, size, size);
     return;
   }
   if (!serafimActive(time)) return;
   const state = serafimFrame || serafimState(time);
   const frame = serafimIdleFrame(time);
   serafimLayer.save();
-  serafimLayer.globalAlpha = loadedArt(serafimEntranceArt) ? 1 : smooth(BOSS_START, BOSS_START + 1.2, time);
   if (state.arm && loadedArt(serafimBodyArt) && loadedArt(serafimArmArt)) {
     const {x, y, scale} = serafimPose;
     serafimLayer.translate(x, y);
@@ -1212,6 +1293,10 @@ const radioLines = [
 ];
 let radioLine = -1, radioOpen = false;
 function stopRadio() {
+  for (const voice of centipedeVoices) {
+    voice.sound.pause();
+    voice.active = false;
+  }
   fireTap = false;
   stopShotSound();
   radioLine = -1; radioOpen = false;
