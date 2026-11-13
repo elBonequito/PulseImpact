@@ -29,7 +29,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V40</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V43</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art" aria-hidden="true"></div>
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
@@ -54,44 +54,27 @@ const names=['PORTADORA','OSCILAÇÃO','INTERFERÊNCIA','RESSONÂNCIA','HIPERESP
 const FIRE_MODE_KEY = 'pulse-impact-fire-mode';
 let automaticFire = true;
 try { automaticFire = localStorage.getItem(FIRE_MODE_KEY) !== 'manual'; } catch {}
-let fireTap = false, shotSound, shotVoice, shotGain;
+let fireTap = false;
+const shotSound = new Audio('art/player-shot.mp3');
+shotSound.preload = 'auto';
 
 function stopShotSound() {
-  if (shotVoice) {
-    shotVoice.stop();
-    shotVoice = null;
-  }
+  shotSound.pause();
 }
 
 function initShotSound() {
-  shotSound = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .098), ctx.sampleRate);
-  const samples = shotSound.getChannelData(0);
-  for (let i = 0; i < samples.length; i++) {
-    const age = i / ctx.sampleRate;
-    const envelope = Math.min(1, age / .002, (.098 - age) / .012) * Math.exp(-32 * age);
-    const body = .48 * Math.sin(2 * Math.PI * (167 * age - 220 * age * age));
-    const attack = .25 * Math.exp(-85 * age) * Math.sin(2 * Math.PI * (960 * age - 3600 * age * age));
-    samples[i] = envelope * (body + attack);
-  }
-  shotGain = ctx.createGain();
-  shotGain.connect(ctx.destination);
-  shotGain.gain.value = audio.muted ? 0 : audio.volume * .48;
-  audio.addEventListener('volumechange', () => {
-    shotGain.gain.value = audio.muted ? 0 : audio.volume * .48;
-  });
+  const syncVolume = () => {
+    shotSound.volume = audio.volume * .48;
+    shotSound.muted = audio.muted;
+  };
+  syncVolume();
+  audio.addEventListener('volumechange', syncVolume);
 }
 
 function playShotSound() {
-  if (!shotGain || audio.muted || audio.volume === 0) return;
-  const voice = ctx.createBufferSource();
-  voice.buffer = shotSound;
-  voice.connect(shotGain);
-  voice.onended = () => {
-    voice.disconnect();
-    if (shotVoice === voice) shotVoice = null;
-  };
-  shotVoice = voice;
-  voice.start();
+  if (audio.muted || audio.volume === 0 || shotSound.readyState < 2) return;
+  shotSound.currentTime = 0;
+  shotSound.play().catch(() => {});
 }
 
 function initAudio(){if(ctx)return;ctx=new AudioContext();initShotSound();source=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=2048;source.connect(analyser);analyser.connect(ctx.destination);bins=new Uint8Array(analyser.frequencyBinCount);
@@ -191,7 +174,7 @@ function end(win = false) {
   $('desc').textContent = score.toLocaleString('pt-BR') + ' pontos';
 }
 function burst(x,y,n=12){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*230,vy:(Math.random()-.5)*230,t:.3+Math.random()*.5})}
-function pulse(){if(!playing||cooldown>0)return;cooldown=8;hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
+function pulse(){if(!playing||cooldown>0||singularityEntrance(audio.currentTime))return;cooldown=8;hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
 let impactVX = 0, impactVY = 0;
 function collideWithObject(object) {
   const dx = ship.x - object.x;
@@ -365,6 +348,16 @@ if(bossMode&&!bossWasActive){enemies=[];hostile=[];bullets=[];phase=0}
 if(!bossMode&&bossWasActive){hostile=[];bullets=[];burst(775,242,90);score+=5000;phase=2}
 bossWasActive=bossMode;
 
+const enteringSingularity = singularityEntrance(t);
+if (enteringSingularity) {
+  const blend = 1 - Math.exp(-dt * 4);
+  const targetX = 110 + 240 * (smooth(164.5, 167, t) - smooth(167, 168.3, t));
+  ship.x += (targetX - ship.x) * blend;
+  ship.y += (240 - ship.y) * blend;
+  ship.tilt *= 1 - blend;
+  impactVX = impactVY = 0;
+  fireTap = false;
+} else {
 const previousShipY = ship.y;
 let dx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0),dy=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);const norm=Math.hypot(dx,dy)||1;if(pointer){ship.x+=(pointer.x-ship.x)*Math.min(1,dt*12);ship.y+=(pointer.y-ship.y)*Math.min(1,dt*12)}else{ship.x+=dx/norm*290*dt;ship.y+=dy/norm*290*dt}ship.x=Math.max(25,Math.min(650,ship.x));ship.y=Math.max(55,Math.min(445,ship.y));
 ship.tilt = interceptorTilt(ship.tilt, ship.y - previousShipY, dt);
@@ -374,6 +367,7 @@ ship.y = Math.max(55, Math.min(445, ship.y + impactVY * dt));
 const recoilDamping = Math.exp(-7 * dt);
 impactVX *= recoilDamping;
 impactVY *= recoilDamping;
+}
 ship.flash = Math.max(0, ship.flash - dt);
 shot -= dt;
 if (shot <= 0 && !(t >= 162 && t < 175) && (automaticFire || fireTap || keys.KeyF)) {
@@ -402,7 +396,7 @@ for (const enemy of enemies) {
 }
 for(const b of hostile){b.x+=b.vx*dt;b.y+=b.vy*dt}updateSerafim(t);
 updatePlayerShots(dt, t);
-if (inv <= 0) {
+if (inv <= 0 && !enteringSingularity) {
   const rock = ringRocks(t).find(asteroidTouchesShip);
   const enemy = enemies.find(object => !object.dead && shipTouches(object.x, object.y, object.r));
   const projectile = hostile.find(object => shipTouches(object.x, object.y, 4));
@@ -424,6 +418,17 @@ if (inv <= 0) {
 }enemies=enemies.filter(e=>!e.dead&&e.x>-50);bullets=bullets.filter(b=>!b.dead&&b.x<990);hostile=hostile.filter(b=>b.x>-20&&b.x<1000&&b.y>-20&&b.y<500);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.t-=dt}particles=particles.filter(p=>p.t>0);for(const s of stars){s.x-=dt*(40+s.s*45)*drive;if(s.x<0)s.x=960}score+=Math.floor(dt*60);$('progress').style.width=(t/(audio.duration||933)*100)+'%';$('clock').textContent=fmt(t)+' / '+fmt(audio.duration||933);$('status').textContent=bossMode?'SINGULARIDADE / SOBREVIVA '+fmt(BOSS_END-t):'SETOR '+String(level).padStart(2,'0')+' / '+names[(level-1)%5]+' / '+drive.toFixed(1)+'×'}
 function fmt(t){return Math.floor(t/60).toString().padStart(2,'0')+':'+Math.floor(t%60).toString().padStart(2,'0')}
 function rect(x,y,w,h){g.fillRect(Math.round(x),Math.round(y),w,h)}
+function singularityEntrance(time) {
+  return time >= BOSS_START - 2.5 && time < BOSS_START + 1.3;
+}
+
+function serafimEntranceFrame(time) {
+  const offset = time - BOSS_START;
+  if (offset < -1 || offset >= 1.2) return null;
+  return offset < 0 ? Math.min(3, Math.floor((offset + 1) * 4))
+    : 4 + Math.min(3, Math.floor(offset / .3));
+}
+
 function drawSingularity(){
 const t=audio.currentTime;if(t<163||t>307)return;
 const entry=Math.max(0,Math.min(1,(t-163)/4)),exit=t>=304?Math.max(0,1-(t-304)/3):1;
@@ -436,13 +441,26 @@ if(t>=304){g.fillStyle=dark;g.fillRect(250,185,490,90);g.fillStyle=bg;g.textAlig
 function drawEntryPulse(){const t=audio.currentTime;if(t<162||t>=163)return;const progress=Math.max(0,Math.min(1,t-162));g.save();g.strokeStyle=dark;g.globalAlpha=1-progress;g.lineWidth=10*(1-progress)+2;g.beginPath();g.arc(entryPulseX,entryPulseY,progress*1400,0,Math.PI*2);g.stroke();g.lineWidth=3;g.beginPath();g.arc(entryPulseX,entryPulseY,Math.max(0,progress*1400-30),0,Math.PI*2);g.stroke();g.restore();}
 function drawWarp(){
 const t=audio.currentTime;if(t<163||t>=176)return;
-const accel=smooth(163,168,t),fade=1-smooth(170,176,t),opacity=smooth(163,165,t)*fade;
+const accel=smooth(163,167,t),fade=1-smooth(167.15,168.65,t),opacity=smooth(163,165,t)*fade;
 const cx=610+(780-610)*smooth(166,173,t),cy=240;
 g.save();g.globalAlpha=opacity*.92;g.fillStyle=bg;g.fillRect(0,38,960,442);
 // Perspective travel: deterministic stars accelerate away from the vanishing point.
 for(const star of warpStars){const z=(star.seed+(t-163)*(.12+accel*.56))%1;const depth=z*z;const r=8+depth*1050;const length=(5+accel*150+energy*30)*(.18+depth);const a=star.angle;g.globalAlpha=opacity*Math.min(1,z*3);g.strokeStyle=dark;g.lineWidth=star.weight*(.4+depth);g.beginPath();g.moveTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r*.65);g.lineTo(cx+Math.cos(a)*(r+length),cy+Math.sin(a)*(r+length)*.65);g.stroke();}
 // Expanding rings maintain a continuous tunnel during the palette crossover.
 for(let i=0;i<8;i++){const z=(i/8+(t-163)*(.10+accel*.23))%1;g.globalAlpha=opacity*z*.27;g.strokeStyle=dark;g.lineWidth=1+z*2;g.beginPath();g.ellipse(cx,cy,12+z*z*750,8+z*z*450,0,0,Math.PI*2);g.stroke()}
+const fold = t - BOSS_START;
+if (fold >= 0 && fold < .68) {
+  const progress = fold / .68;
+  g.strokeStyle = '#8defff';
+  for (let i = 0; i < 6; i++) {
+    const radius = 12 + progress * (390 + i * 52);
+    g.globalAlpha = (1 - progress) * (.85 - i * .1);
+    g.lineWidth = 1 + (1 - progress) * 5;
+    g.beginPath();
+    g.ellipse(775, 240, radius, radius * (.28 + progress * .42), progress * .45, 0, Math.PI * 2);
+    g.stroke();
+  }
+}
 g.restore();}
 const asteroidCells = [[0, 0], [128, 0], [256, 0], [0, 128], [128, 128]];
 const asteroidMasks = [[[-10,-50],[-6,-50],[-22,-46],[-18,-46],[-14,-46],[-10,-46],[-6,-46],[-2,-46],[2,-46],[-30,-42],[-26,-42],[-22,-42],[-18,-42],[-14,-42],[-10,-42],[-6,-42],[-2,-42],[2,-42],[6,-42],[10,-42],[-34,-38],[-30,-38],[-26,-38],[-22,-38],[-18,-38],[-14,-38],[-10,-38],[-6,-38],[-2,-38],[2,-38],[6,-38],[10,-38],[-38,-34],[-34,-34],[-30,-34],[-26,-34],[-22,-34],[-18,-34],[-14,-34],[-10,-34],[-6,-34],[-2,-34],[2,-34],[6,-34],[10,-34],[14,-34],[18,-34],[-42,-30],[-38,-30],[-34,-30],[-30,-30],[-26,-30],[-22,-30],[-18,-30],[-14,-30],[-10,-30],[-6,-30],[-2,-30],[2,-30],[6,-30],[10,-30],[14,-30],[18,-30],[22,-30],[-46,-26],[-42,-26],[-38,-26],[-34,-26],[-30,-26],[-26,-26],[-22,-26],[-18,-26],[-14,-26],[-10,-26],[-6,-26],[-2,-26],[2,-26],[6,-26],[10,-26],[14,-26],[18,-26],[22,-26],[34,-26],[46,-26],[-46,-22],[-42,-22],[-38,-22],[-34,-22],[-30,-22],[-26,-22],[-22,-22],[-18,-22],[-14,-22],[-10,-22],[-6,-22],[-2,-22],[2,-22],[6,-22],[10,-22],[14,-22],[18,-22],[22,-22],[26,-22],[30,-22],[34,-22],[38,-22],[42,-22],[46,-22],[-50,-18],[-46,-18],[-42,-18],[-38,-18],[-34,-18],[-30,-18],[-26,-18],[-22,-18],[-18,-18],[-14,-18],[-10,-18],[-6,-18],[-2,-18],[2,-18],[6,-18],[10,-18],[14,-18],[18,-18],[22,-18],[26,-18],[30,-18],[34,-18],[38,-18],[42,-18],[46,-18],[-50,-14],[-46,-14],[-42,-14],[-38,-14],[-34,-14],[-30,-14],[-26,-14],[-22,-14],[-18,-14],[-14,-14],[-10,-14],[-6,-14],[-2,-14],[2,-14],[6,-14],[10,-14],[14,-14],[18,-14],[22,-14],[26,-14],[30,-14],[34,-14],[38,-14],[42,-14],[-50,-10],[-46,-10],[-42,-10],[-38,-10],[-34,-10],[-30,-10],[-26,-10],[-22,-10],[-18,-10],[-14,-10],[-10,-10],[-6,-10],[-2,-10],[2,-10],[6,-10],[10,-10],[14,-10],[18,-10],[22,-10],[26,-10],[30,-10],[34,-10],[38,-10],[42,-10],[-50,-6],[-46,-6],[-42,-6],[-38,-6],[-34,-6],[-30,-6],[-26,-6],[-22,-6],[-18,-6],[-14,-6],[-10,-6],[-6,-6],[-2,-6],[2,-6],[6,-6],[10,-6],[14,-6],[18,-6],[22,-6],[26,-6],[30,-6],[34,-6],[38,-6],[50,-6],[54,-6],[-54,-2],[-50,-2],[-46,-2],[-42,-2],[-38,-2],[-34,-2],[-30,-2],[-26,-2],[-22,-2],[-18,-2],[-14,-2],[-10,-2],[-6,-2],[-2,-2],[2,-2],[6,-2],[10,-2],[14,-2],[18,-2],[22,-2],[26,-2],[30,-2],[34,-2],[38,-2],[42,-2],[46,-2],[50,-2],[-54,2],[-50,2],[-46,2],[-42,2],[-38,2],[-34,2],[-30,2],[-26,2],[-22,2],[-18,2],[-14,2],[-10,2],[-6,2],[-2,2],[2,2],[6,2],[10,2],[14,2],[18,2],[22,2],[26,2],[30,2],[34,2],[38,2],[42,2],[46,2],[50,2],[-54,6],[-50,6],[-46,6],[-42,6],[-38,6],[-34,6],[-30,6],[-26,6],[-22,6],[-18,6],[-14,6],[-10,6],[-6,6],[-2,6],[2,6],[6,6],[10,6],[14,6],[18,6],[22,6],[26,6],[30,6],[34,6],[38,6],[42,6],[46,6],[-50,10],[-46,10],[-42,10],[-38,10],[-34,10],[-30,10],[-26,10],[-22,10],[-18,10],[-14,10],[-10,10],[-6,10],[-2,10],[2,10],[6,10],[10,10],[14,10],[18,10],[22,10],[26,10],[30,10],[34,10],[38,10],[42,10],[46,10],[-46,14],[-42,14],[-38,14],[-34,14],[-30,14],[-26,14],[-22,14],[-18,14],[-14,14],[-10,14],[-6,14],[-2,14],[2,14],[6,14],[10,14],[14,14],[18,14],[22,14],[26,14],[30,14],[34,14],[38,14],[-46,18],[-42,18],[-38,18],[-34,18],[-30,18],[-26,18],[-22,18],[-18,18],[-14,18],[-10,18],[-6,18],[-2,18],[2,18],[6,18],[10,18],[14,18],[18,18],[22,18],[26,18],[30,18],[34,18],[38,18],[-42,22],[-38,22],[-34,22],[-30,22],[-26,22],[-22,22],[-18,22],[-14,22],[-10,22],[-6,22],[-2,22],[2,22],[6,22],[10,22],[14,22],[18,22],[22,22],[26,22],[30,22],[34,22],[-42,26],[-38,26],[-34,26],[-30,26],[-26,26],[-22,26],[-18,26],[-14,26],[-10,26],[-6,26],[-2,26],[2,26],[6,26],[10,26],[14,26],[18,26],[22,26],[26,26],[-38,30],[-34,30],[-30,30],[-26,30],[-22,30],[-18,30],[-14,30],[-10,30],[-6,30],[-2,30],[2,30],[6,30],[10,30],[14,30],[18,30],[22,30],[26,30],[-30,34],[-26,34],[-22,34],[-18,34],[-14,34],[-10,34],[-6,34],[-2,34],[2,34],[6,34],[10,34],[14,34],[22,34],[-26,38],[-22,38],[-18,38],[-14,38],[-10,38],[-6,38],[-2,38],[2,38],[6,38],[10,38],[-22,42],[-18,42],[-14,42],[-10,42],[-6,42],[-2,42],[-18,46],[-14,46],[-10,46],[-6,46]],[[14,-50],[10,-46],[14,-46],[6,-42],[10,-42],[14,-42],[2,-38],[6,-38],[10,-38],[14,-38],[2,-34],[6,-34],[10,-34],[14,-34],[2,-30],[6,-30],[10,-30],[14,-30],[18,-30],[-6,-26],[-2,-26],[2,-26],[6,-26],[10,-26],[14,-26],[18,-26],[22,-26],[-10,-22],[-6,-22],[-2,-22],[2,-22],[6,-22],[10,-22],[14,-22],[18,-22],[22,-22],[-10,-18],[-6,-18],[-2,-18],[2,-18],[6,-18],[10,-18],[14,-18],[18,-18],[-14,-14],[-10,-14],[-6,-14],[-2,-14],[2,-14],[6,-14],[10,-14],[14,-14],[18,-14],[-10,-10],[-6,-10],[-2,-10],[2,-10],[6,-10],[10,-10],[14,-10],[18,-10],[-14,-6],[-10,-6],[-6,-6],[-2,-6],[2,-6],[6,-6],[10,-6],[14,-6],[18,-6],[-18,-2],[-14,-2],[-10,-2],[-6,-2],[-2,-2],[2,-2],[6,-2],[10,-2],[14,-2],[18,-2],[22,-2],[-22,2],[-18,2],[-14,2],[-10,2],[-6,2],[-2,2],[2,2],[6,2],[10,2],[14,2],[18,2],[22,2],[-22,6],[-18,6],[-14,6],[-10,6],[-6,6],[-2,6],[2,6],[6,6],[10,6],[14,6],[18,6],[22,6],[-22,10],[-18,10],[-14,10],[-10,10],[-6,10],[-2,10],[2,10],[6,10],[10,10],[14,10],[18,10],[-22,14],[-18,14],[-14,14],[-10,14],[-6,14],[-2,14],[2,14],[6,14],[10,14],[14,14],[18,14],[-22,18],[-18,18],[-14,18],[-10,18],[-6,18],[-2,18],[2,18],[6,18],[10,18],[14,18],[-18,22],[-14,22],[-10,22],[-6,22],[-2,22],[2,22],[6,22],[10,22],[14,22],[-18,26],[-14,26],[-10,26],[-6,26],[-2,26],[2,26],[6,26],[10,26],[-18,30],[-14,30],[-10,30],[-6,30],[-2,30],[2,30],[6,30],[10,30],[-14,34],[-10,34],[-6,34],[-2,34],[6,34],[-14,38],[-10,38],[-6,38],[-2,38],[-14,42],[-10,42],[-6,42],[-10,46]],[[2,-26],[-10,-22],[-6,-22],[-2,-22],[2,-22],[6,-22],[10,-22],[14,-22],[-14,-18],[-10,-18],[-6,-18],[-2,-18],[2,-18],[6,-18],[-18,-14],[-14,-14],[-10,-14],[-6,-14],[-2,-14],[2,-14],[-22,-10],[-18,-10],[-14,-10],[-10,-10],[-6,-10],[-2,-10],[-22,-6],[-18,-6],[-14,-6],[-10,-6],[-6,-6],[-2,-6],[-22,-2],[-18,-2],[-14,-2],[-10,-2],[-6,-2],[-2,-2],[-26,2],[-22,2],[-18,2],[-14,2],[-10,2],[-6,2],[-2,2],[2,2],[6,2],[-22,6],[-18,6],[-14,6],[-10,6],[-6,6],[-2,6],[2,6],[6,6],[10,6],[18,6],[22,6],[-22,10],[-18,10],[-14,10],[-10,10],[-6,10],[-2,10],[2,10],[6,10],[10,10],[14,10],[18,10],[-18,14],[-14,14],[-10,14],[-6,14],[-2,14],[2,14],[6,14],[10,14],[14,14],[18,14],[-18,18],[-14,18],[-10,18],[-6,18],[-2,18],[2,18],[6,18],[10,18],[14,18],[-6,22],[-2,22],[2,22],[6,22]],[[38,-34],[-10,-30],[-6,-30],[-2,-30],[2,-30],[6,-30],[10,-30],[30,-30],[34,-30],[38,-30],[42,-30],[46,-30],[50,-30],[54,-30],[-30,-26],[-26,-26],[-22,-26],[-18,-26],[-14,-26],[-10,-26],[-6,-26],[-2,-26],[2,-26],[6,-26],[10,-26],[14,-26],[18,-26],[22,-26],[26,-26],[30,-26],[34,-26],[38,-26],[42,-26],[46,-26],[-38,-22],[-34,-22],[-30,-22],[-26,-22],[-22,-22],[-18,-22],[-14,-22],[-10,-22],[-6,-22],[-2,-22],[2,-22],[6,-22],[10,-22],[14,-22],[18,-22],[22,-22],[26,-22],[30,-22],[34,-22],[38,-22],[42,-22],[-42,-18],[-38,-18],[-34,-18],[-30,-18],[-26,-18],[-22,-18],[-18,-18],[-14,-18],[-10,-18],[-6,-18],[-2,-18],[2,-18],[6,-18],[10,-18],[14,-18],[18,-18],[22,-18],[26,-18],[30,-18],[34,-18],[38,-18],[-46,-14],[-42,-14],[-38,-14],[-34,-14],[-30,-14],[-26,-14],[-22,-14],[-18,-14],[-14,-14],[-10,-14],[-6,-14],[-2,-14],[2,-14],[6,-14],[10,-14],[14,-14],[18,-14],[22,-14],[26,-14],[30,-14],[-54,-10],[-50,-10],[-46,-10],[-42,-10],[-38,-10],[-34,-10],[-30,-10],[-26,-10],[-22,-10],[-18,-10],[-14,-10],[-10,-10],[-6,-10],[-2,-10],[2,-10],[6,-10],[10,-10],[14,-10],[18,-10],[22,-10],[26,-10],[30,-10],[46,-10],[50,-10],[54,-10],[58,-10],[-58,-6],[-54,-6],[-50,-6],[-46,-6],[-42,-6],[-38,-6],[-34,-6],[-30,-6],[-26,-6],[-22,-6],[-18,-6],[-14,-6],[-10,-6],[-6,-6],[-2,-6],[2,-6],[6,-6],[10,-6],[14,-6],[18,-6],[22,-6],[26,-6],[30,-6],[38,-6],[42,-6],[46,-6],[50,-6],[54,-6],[-58,-2],[-54,-2],[-50,-2],[-46,-2],[-42,-2],[-38,-2],[-34,-2],[-30,-2],[-26,-2],[-22,-2],[-18,-2],[-14,-2],[-10,-2],[-6,-2],[-2,-2],[2,-2],[6,-2],[10,-2],[14,-2],[18,-2],[22,-2],[26,-2],[30,-2],[34,-2],[38,-2],[42,-2],[46,-2],[50,-2],[-54,2],[-50,2],[-46,2],[-42,2],[-38,2],[-34,2],[-30,2],[-26,2],[-22,2],[-18,2],[-14,2],[-10,2],[-6,2],[-2,2],[2,2],[6,2],[10,2],[14,2],[18,2],[22,2],[26,2],[30,2],[34,2],[38,2],[42,2],[46,2],[50,2],[-54,6],[-50,6],[-46,6],[-42,6],[-38,6],[-34,6],[-30,6],[-26,6],[-22,6],[-18,6],[-14,6],[-10,6],[-6,6],[-2,6],[2,6],[6,6],[10,6],[14,6],[18,6],[22,6],[26,6],[30,6],[34,6],[38,6],[42,6],[46,6],[-54,10],[-50,10],[-46,10],[-42,10],[-38,10],[-34,10],[-30,10],[-26,10],[-22,10],[-18,10],[-14,10],[-10,10],[-6,10],[-2,10],[2,10],[6,10],[10,10],[14,10],[18,10],[22,10],[26,10],[30,10],[34,10],[38,10],[42,10],[-50,14],[-46,14],[-42,14],[-38,14],[-34,14],[-30,14],[-26,14],[-22,14],[-18,14],[-14,14],[-10,14],[-6,14],[-2,14],[2,14],[6,14],[10,14],[14,14],[18,14],[22,14],[26,14],[30,14],[34,14],[38,14],[-46,18],[-42,18],[-38,18],[-34,18],[-30,18],[-26,18],[-22,18],[-18,18],[-14,18],[-10,18],[-6,18],[-2,18],[2,18],[6,18],[10,18],[14,18],[18,18],[22,18],[26,18],[-34,22],[-30,22],[-26,22],[-22,22],[-18,22],[-14,22],[-10,22],[-6,22],[-2,22],[2,22],[6,22],[10,22],[14,22],[18,22],[22,22],[-30,26],[-26,26],[-22,26],[-18,26],[-14,26],[-10,26],[-6,26],[-2,26],[-30,30],[-26,30],[-22,30],[-14,30]],[[-2,-34],[2,-34],[-6,-30],[-2,-30],[2,-30],[6,-30],[-14,-26],[-10,-26],[-6,-26],[-2,-26],[2,-26],[6,-26],[10,-26],[-18,-22],[-14,-22],[-10,-22],[-6,-22],[-2,-22],[2,-22],[6,-22],[10,-22],[14,-22],[18,-22],[-22,-18],[-18,-18],[-14,-18],[-10,-18],[-6,-18],[-2,-18],[2,-18],[6,-18],[10,-18],[14,-18],[18,-18],[-22,-14],[-18,-14],[-14,-14],[-10,-14],[-6,-14],[-2,-14],[2,-14],[6,-14],[10,-14],[14,-14],[18,-14],[22,-14],[-26,-10],[-22,-10],[-18,-10],[-14,-10],[-10,-10],[-6,-10],[-2,-10],[2,-10],[6,-10],[10,-10],[14,-10],[18,-10],[22,-10],[26,-10],[-26,-6],[-22,-6],[-18,-6],[-14,-6],[-10,-6],[-6,-6],[-2,-6],[2,-6],[6,-6],[10,-6],[14,-6],[18,-6],[22,-6],[26,-6],[-30,-2],[-26,-2],[-22,-2],[-18,-2],[-14,-2],[-10,-2],[-6,-2],[-2,-2],[2,-2],[6,-2],[10,-2],[14,-2],[18,-2],[22,-2],[-26,2],[-22,2],[-18,2],[-14,2],[-10,2],[-6,2],[-2,2],[2,2],[6,2],[10,2],[14,2],[18,2],[22,2],[-26,6],[-22,6],[-18,6],[-14,6],[-10,6],[-6,6],[-2,6],[2,6],[6,6],[10,6],[14,6],[18,6],[22,6],[-22,10],[-18,10],[-14,10],[-10,10],[-6,10],[-2,10],[2,10],[6,10],[10,10],[14,10],[18,10],[-18,14],[-14,14],[-10,14],[-6,14],[-2,14],[2,14],[6,14],[10,14],[14,14],[-14,18],[-10,18],[-6,18],[-2,18],[2,18],[6,18],[-10,22],[-6,22],[-2,22],[2,22],[6,22],[-10,26],[-6,26],[-2,26],[2,26],[-6,30],[-2,30]]];
@@ -882,12 +900,29 @@ function interceptorTilt(current, verticalTravel, dt) {
   return current + (target - current) * (1 - Math.exp(-14 * dt));
 }
 
+const hyperspaceShipArt = loadArt('art/ship-hyperspace.png');
+
+function hyperspaceShipFrame(time) {
+  if (time < BOSS_START - 1 || time >= BOSS_START + 1.3) return null;
+  const offset = time - BOSS_START;
+  return offset < 0 ? Math.min(3, Math.floor((offset + 1) * 4))
+    : 4 + Math.min(3, Math.floor(offset / .325));
+}
+
 function drawInterceptor() {
   if (inv > 0 && Math.floor(inv * 18) % 2 !== 0) return;
   g.save();
   g.translate(Math.round(ship.x), Math.round(ship.y));
   g.rotate(ship.tilt);
   g.imageSmoothingEnabled = false;
+  const frame = hyperspaceShipFrame(audio.currentTime);
+  if (frame !== null && loadedArt(hyperspaceShipArt)) {
+    const scale = 70 / 168;
+    g.drawImage(hyperspaceShipArt, frame % 4 * 320, Math.floor(frame / 4) * 112,
+      320, 112, -35 - 144 * scale, -18 - 12 * scale, 320 * scale, 112 * scale);
+    g.restore();
+    return;
+  }
   if (loadedArt(shipArt)) {
     if (inv > 0) g.filter = 'brightness(2.3)';
     const height = 70 * shipArt.naturalHeight / shipArt.naturalWidth;
@@ -971,13 +1006,24 @@ const serafimIdleArt = loadArt('art/serafim-idle.webp');
 function serafimIdleFrame(time) {
   return Math.floor(Math.max(0, time - BOSS_START) * 8) % 8;
 }
+const serafimEntranceArt = loadArt('art/serafim-entrance.png');
+
 function drawSerafim(time) {
   serafimLayer.clearRect(0, 0, 960, 480);
+  const entranceFrame = serafimEntranceFrame(time);
+  if (entranceFrame !== null && loadedArt(serafimEntranceArt)) {
+    const cell = 444;
+    const {x, y, scale} = serafimPose;
+    const size = cell * scale;
+    serafimLayer.drawImage(serafimEntranceArt, entranceFrame % 4 * cell,
+      Math.floor(entranceFrame / 4) * cell, cell, cell, x, y, size, size);
+    return;
+  }
   if (!serafimActive(time)) return;
   const state = serafimFrame || serafimState(time);
   const frame = serafimIdleFrame(time);
   serafimLayer.save();
-  serafimLayer.globalAlpha = smooth(BOSS_START, SERAFIM.combatStart, time);
+  serafimLayer.globalAlpha = loadedArt(serafimEntranceArt) ? 1 : smooth(BOSS_START, BOSS_START + 1.2, time);
   if (state.arm && loadedArt(serafimBodyArt) && loadedArt(serafimArmArt)) {
     const {x, y, scale} = serafimPose;
     serafimLayer.translate(x, y);
