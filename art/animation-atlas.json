@@ -1,0 +1,36 @@
+{
+  "units": "pixels; durations in milliseconds",
+  "animation": {
+    "idle": {
+      "asset": "art/serafim-idle.webp",
+      "cell": [
+        444,
+        444
+      ],
+      "columns": 4,
+      "count": 8,
+      "durationMs": 125
+    },
+    "attack": {
+      "asset": "art/serafim-attack.webp",
+      "cell": [
+        444,
+        444
+      ],
+      "columns": 4,
+      "count": 8,
+      "timing": "Rel\u00f3gio da m\u00fasica; pose din\u00e2mica usa o corpo e o cetro separados"
+    },
+    "entrance": {
+      "pattern": "art/serafim-entrada/Serafim_0{page}.png",
+      "cell": [
+        444,
+        444
+      ],
+      "columns": 8,
+      "count": 312,
+      "framesPerPage": 52,
+      "fps": 24
+    }
+  }
+}
