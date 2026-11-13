@@ -29,7 +29,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V45</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V46</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art" aria-hidden="true"></div>
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
@@ -45,7 +45,12 @@ g.setTransform(renderScale, 0, 0, renderScale, 0, 0);
 g.imageSmoothingEnabled=false;
 let bassAnalyser,bassBins,bassFilter,bassFloor=0.01,bassPeak=0.03,bassEnv=0,bassRaw=0,drive=1,travel=0,rings=[],trail=[],shock=0;
 const smooth=(a,b,t)=>{const x=Math.max(0,Math.min(1,(t-a)/(b-a)));return x*x*(3-2*x)};
-const warpStars=Array.from({length:180},(_,i)=>({angle:i*2.39996323,seed:(i*.61803398875)%1,weight:1+(i%3)}));
+const warpStars = Array.from({length: 90}, (_, i) => ({
+  y: 40 + ((i * 137) % 437), seed: (i * .61803398875) % 1,
+  depth: .35 + ((i * 29) % 61) / 60
+}));
+let pulseVisual = null, dropPulse = null;
+const warpPoses = [];
 const HYPERSPACE_START=160;
 const BOSS_START=167,BOSS_END=304;let entryPulseDone=false;let bossMode=false,bossWasActive=false;
 let ctx,analyser,bins,source,playing=false,started=false,last=0,shot=0,spawn=0,beat=0,avg=.15,lastBeat=-1,energy=0,score=0,kills=0,level=1,hp=5,inv=0,cooldown=0,phase=0,frame=0;
@@ -58,15 +63,25 @@ try { automaticFire = localStorage.getItem(FIRE_MODE_KEY) !== 'manual'; } catch 
 let fireTap = false;
 const shotSound = new Audio('art/player-shot.mp3');
 shotSound.preload = 'auto';
+const fortressSounds = [1, 2, 3].map(index => {
+  const sound = new Audio('art/fortress-shot-' + index + '.mp3');
+  sound.preload = 'auto';
+  return sound;
+});
 
 function stopShotSound() {
   shotSound.pause();
+  fortressSounds.forEach(sound => sound.pause());
 }
 
 function initShotSound() {
   const syncVolume = () => {
     shotSound.volume = audio.volume * .48;
     shotSound.muted = audio.muted;
+    for (const sound of fortressSounds) {
+      sound.volume = audio.volume * .22;
+      sound.muted = audio.muted;
+    }
   };
   syncVolume();
   audio.addEventListener('volumechange', syncVolume);
@@ -82,7 +97,7 @@ function initAudio(){if(ctx)return;ctx=new AudioContext();initShotSound();source
 bassFilter=ctx.createBiquadFilter();bassFilter.type='lowpass';bassFilter.frequency.value=160;bassFilter.Q.value=.707;
 bassAnalyser=ctx.createAnalyser();bassAnalyser.fftSize=2048;bassBins=new Float32Array(bassAnalyser.fftSize);
 source.connect(bassFilter);bassFilter.connect(bassAnalyser)}
-function reset(){asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240,tilt:0,flash:0};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
+function reset(){clearWarpEffects();asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240,tilt:0,flash:0};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
 let menuPage = 'home', menuSelection = 0, openingGame = false, launchTimer = 0, uiSession = 0;
 const menuButtons = () => [...$('menuOptions').querySelectorAll('button')];
 function chooseMenu(index, focus = true) {
@@ -175,7 +190,7 @@ function end(win = false) {
   $('desc').textContent = score.toLocaleString('pt-BR') + ' pontos';
 }
 function burst(x,y,n=12){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*230,vy:(Math.random()-.5)*230,t:.3+Math.random()*.5})}
-function pulse(){if(!playing||cooldown>0||singularityEntrance(audio.currentTime))return;cooldown=8;hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
+function pulse(){if(!playing||cooldown>0||singularityEntrance(audio.currentTime))return;pulseVisual={x:ship.x,y:ship.y,start:audio.currentTime};cooldown=8;hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
 let impactVX = 0, impactVY = 0;
 function collideWithObject(object) {
   const dx = ship.x - object.x;
@@ -223,7 +238,7 @@ async function seekSector(seconds) {
     started = true;
     playing = true;
     enemies = []; hostile = []; bullets = []; particles = []; rings = []; trail = [];
-    bossWasActive = false; entryPulseDone = false; spawn = 0;
+    clearWarpEffects(); bossWasActive = false; entryPulseDone = false; spawn = 0;
     impactVX = impactVY = 0;
     inv = 0;
     lastBeat = seconds - 1;
@@ -369,6 +384,14 @@ const recoilDamping = Math.exp(-7 * dt);
 impactVX *= recoilDamping;
 impactVY *= recoilDamping;
 }
+if (enteringSingularity) {
+  warpPoses.push({x: ship.x, y: ship.y, tilt: ship.tilt, time: t});
+  while (warpPoses.length > 1 && t - warpPoses[1].time > .42) warpPoses.shift();
+  if (!dropPulse && t >= BOSS_START) dropPulse = {x: ship.x, y: ship.y, start: BOSS_START};
+} else {
+  warpPoses.length = 0;
+  dropPulse = null;
+}
 ship.flash = Math.max(0, ship.flash - dt);
 shot -= dt;
 if (shot <= 0 && !(t >= 162 && t < 175) && (automaticFire || fireTap || keys.KeyF)) {
@@ -434,39 +457,41 @@ function drawSingularity(){
 const t=audio.currentTime;if(t<163||t>307)return;
 if(t>=304){g.fillStyle=dark;g.fillRect(250,185,490,90);g.fillStyle=bg;g.textAlign='center';g.font='bold 24px "Pulse Serif", serif';g.fillText('SINGULARIDADE SUPERADA',495,223);g.font='14px "Pulse Serif", serif';g.fillText('05:04 / +5000 PONTOS',495,253);g.textAlign='left';}
 }
+function clearWarpEffects() {
+  warpPoses.length = 0;
+  pulseVisual = dropPulse = null;
+}
+
 function drawWarp() {
   const time = audio.currentTime;
   if (!singularityEntrance(time)) return;
-  const duration = BOSS_START - HYPERSPACE_START;
   const elapsed = time - HYPERSPACE_START;
-  const ramp = Math.min(elapsed / duration, 1);
-  const afterDrop = Math.max(0, elapsed - duration);
-  const opacity = smooth(HYPERSPACE_START, HYPERSPACE_START + .5, time)
+  const ramp = Math.min(elapsed / (BOSS_START - HYPERSPACE_START), 1);
+  const distance = 490 * elapsed + 4100 * ramp ** 3 + 1757 * Math.max(0, time - BOSS_START);
+  const opacity = smooth(HYPERSPACE_START, HYPERSPACE_START + .35, time)
     * (1 - smooth(BOSS_START, BOSS_START + 1.3, time));
-  // Integrated speed curve keeps the streaks moving forward even after the drop.
-  const phase = .38 * elapsed + duration * 1.8 * ramp ** 3 / 3 + 1.8 * afterDrop;
-  const length = 45 + ramp ** 2 * 360;
   g.save();
   g.globalAlpha = opacity * .88;
   g.fillStyle = bg;
   g.fillRect(0, 38, 960, 442);
   for (const star of warpStars) {
-    const z = (star.seed + phase) % 1;
-    const radius = 24 + z * z * 1050;
-    const stretch = length * (.25 + z);
-    const fold = Math.sin(Math.PI * Math.min(1, afterDrop / .48));
-    const angle = star.angle + fold * z * .32;
-    const dx = Math.cos(angle), dy = Math.sin(angle) * .62;
-    g.globalAlpha = opacity * Math.min(1, z * 5, (1 - z) * 12);
-    g.strokeStyle = star.weight === 3 ? '#72d9ea' : '#e6f5ff';
-    g.lineWidth = .6 + z * 1.8;
+    const x = 1170 - (star.seed * 1400 + distance * star.depth) % 1400;
+    const length = (24 + 154 * ramp ** 2) * star.depth;
+    const pulseAge = dropPulse ? (time - dropPulse.start) / .54 : 1;
+    const dx = dropPulse ? x - dropPulse.x : 0;
+    const dy = dropPulse ? star.y - dropPulse.y : 0;
+    const wave = pulseAge < 1 ? Math.max(0, 1 - Math.abs(Math.hypot(dx, dy) - pulseAge * 250) / 48) : 0;
+    g.globalAlpha = opacity * Math.min(.95, .25 + star.depth * .52);
+    g.strokeStyle = star.depth > .9 ? '#e6f5ff' : '#72d9ea';
+    g.lineWidth = .65 + star.depth;
     g.beginPath();
-    g.moveTo(790 + dx * radius, 240 + dy * radius);
-    g.lineTo(790 + dx * (radius + stretch), 240 + dy * (radius + stretch));
+    g.moveTo(x, star.y + Math.sign(dy) * wave * 13);
+    g.lineTo(x + length, star.y);
     g.stroke();
   }
   g.restore();
 }
+
 const asteroidCells = [[0, 0], [128, 0], [256, 0], [0, 128], [128, 128]];
 const asteroidMasks = [[[-10,-50],[-6,-50],[-22,-46],[-18,-46],[-14,-46],[-10,-46],[-6,-46],[-2,-46],[2,-46],[-30,-42],[-26,-42],[-22,-42],[-18,-42],[-14,-42],[-10,-42],[-6,-42],[-2,-42],[2,-42],[6,-42],[10,-42],[-34,-38],[-30,-38],[-26,-38],[-22,-38],[-18,-38],[-14,-38],[-10,-38],[-6,-38],[-2,-38],[2,-38],[6,-38],[10,-38],[-38,-34],[-34,-34],[-30,-34],[-26,-34],[-22,-34],[-18,-34],[-14,-34],[-10,-34],[-6,-34],[-2,-34],[2,-34],[6,-34],[10,-34],[14,-34],[18,-34],[-42,-30],[-38,-30],[-34,-30],[-30,-30],[-26,-30],[-22,-30],[-18,-30],[-14,-30],[-10,-30],[-6,-30],[-2,-30],[2,-30],[6,-30],[10,-30],[14,-30],[18,-30],[22,-30],[-46,-26],[-42,-26],[-38,-26],[-34,-26],[-30,-26],[-26,-26],[-22,-26],[-18,-26],[-14,-26],[-10,-26],[-6,-26],[-2,-26],[2,-26],[6,-26],[10,-26],[14,-26],[18,-26],[22,-26],[34,-26],[46,-26],[-46,-22],[-42,-22],[-38,-22],[-34,-22],[-30,-22],[-26,-22],[-22,-22],[-18,-22],[-14,-22],[-10,-22],[-6,-22],[-2,-22],[2,-22],[6,-22],[10,-22],[14,-22],[18,-22],[22,-22],[26,-22],[30,-22],[34,-22],[38,-22],[42,-22],[46,-22],[-50,-18],[-46,-18],[-42,-18],[-38,-18],[-34,-18],[-30,-18],[-26,-18],[-22,-18],[-18,-18],[-14,-18],[-10,-18],[-6,-18],[-2,-18],[2,-18],[6,-18],[10,-18],[14,-18],[18,-18],[22,-18],[26,-18],[30,-18],[34,-18],[38,-18],[42,-18],[46,-18],[-50,-14],[-46,-14],[-42,-14],[-38,-14],[-34,-14],[-30,-14],[-26,-14],[-22,-14],[-18,-14],[-14,-14],[-10,-14],[-6,-14],[-2,-14],[2,-14],[6,-14],[10,-14],[14,-14],[18,-14],[22,-14],[26,-14],[30,-14],[34,-14],[38,-14],[42,-14],[-50,-10],[-46,-10],[-42,-10],[-38,-10],[-34,-10],[-30,-10],[-26,-10],[-22,-10],[-18,-10],[-14,-10],[-10,-10],[-6,-10],[-2,-10],[2,-10],[6,-10],[10,-10],[14,-10],[18,-10],[22,-10],[26,-10],[30,-10],[34,-10],[38,-10],[42,-10],[-50,-6],[-46,-6],[-42,-6],[-38,-6],[-34,-6],[-30,-6],[-26,-6],[-22,-6],[-18,-6],[-14,-6],[-10,-6],[-6,-6],[-2,-6],[2,-6],[6,-6],[10,-6],[14,-6],[18,-6],[22,-6],[26,-6],[30,-6],[34,-6],[38,-6],[50,-6],[54,-6],[-54,-2],[-50,-2],[-46,-2],[-42,-2],[-38,-2],[-34,-2],[-30,-2],[-26,-2],[-22,-2],[-18,-2],[-14,-2],[-10,-2],[-6,-2],[-2,-2],[2,-2],[6,-2],[10,-2],[14,-2],[18,-2],[22,-2],[26,-2],[30,-2],[34,-2],[38,-2],[42,-2],[46,-2],[50,-2],[-54,2],[-50,2],[-46,2],[-42,2],[-38,2],[-34,2],[-30,2],[-26,2],[-22,2],[-18,2],[-14,2],[-10,2],[-6,2],[-2,2],[2,2],[6,2],[10,2],[14,2],[18,2],[22,2],[26,2],[30,2],[34,2],[38,2],[42,2],[46,2],[50,2],[-54,6],[-50,6],[-46,6],[-42,6],[-38,6],[-34,6],[-30,6],[-26,6],[-22,6],[-18,6],[-14,6],[-10,6],[-6,6],[-2,6],[2,6],[6,6],[10,6],[14,6],[18,6],[22,6],[26,6],[30,6],[34,6],[38,6],[42,6],[46,6],[-50,10],[-46,10],[-42,10],[-38,10],[-34,10],[-30,10],[-26,10],[-22,10],[-18,10],[-14,10],[-10,10],[-6,10],[-2,10],[2,10],[6,10],[10,10],[14,10],[18,10],[22,10],[26,10],[30,10],[34,10],[38,10],[42,10],[46,10],[-46,14],[-42,14],[-38,14],[-34,14],[-30,14],[-26,14],[-22,14],[-18,14],[-14,14],[-10,14],[-6,14],[-2,14],[2,14],[6,14],[10,14],[14,14],[18,14],[22,14],[26,14],[30,14],[34,14],[38,14],[-46,18],[-42,18],[-38,18],[-34,18],[-30,18],[-26,18],[-22,18],[-18,18],[-14,18],[-10,18],[-6,18],[-2,18],[2,18],[6,18],[10,18],[14,18],[18,18],[22,18],[26,18],[30,18],[34,18],[38,18],[-42,22],[-38,22],[-34,22],[-30,22],[-26,22],[-22,22],[-18,22],[-14,22],[-10,22],[-6,22],[-2,22],[2,22],[6,22],[10,22],[14,22],[18,22],[22,22],[26,22],[30,22],[34,22],[-42,26],[-38,26],[-34,26],[-30,26],[-26,26],[-22,26],[-18,26],[-14,26],[-10,26],[-6,26],[-2,26],[2,26],[6,26],[10,26],[14,26],[18,26],[22,26],[26,26],[-38,30],[-34,30],[-30,30],[-26,30],[-22,30],[-18,30],[-14,30],[-10,30],[-6,30],[-2,30],[2,30],[6,30],[10,30],[14,30],[18,30],[22,30],[26,30],[-30,34],[-26,34],[-22,34],[-18,34],[-14,34],[-10,34],[-6,34],[-2,34],[2,34],[6,34],[10,34],[14,34],[22,34],[-26,38],[-22,38],[-18,38],[-14,38],[-10,38],[-6,38],[-2,38],[2,38],[6,38],[10,38],[-22,42],[-18,42],[-14,42],[-10,42],[-6,42],[-2,42],[-18,46],[-14,46],[-10,46],[-6,46]],[[14,-50],[10,-46],[14,-46],[6,-42],[10,-42],[14,-42],[2,-38],[6,-38],[10,-38],[14,-38],[2,-34],[6,-34],[10,-34],[14,-34],[2,-30],[6,-30],[10,-30],[14,-30],[18,-30],[-6,-26],[-2,-26],[2,-26],[6,-26],[10,-26],[14,-26],[18,-26],[22,-26],[-10,-22],[-6,-22],[-2,-22],[2,-22],[6,-22],[10,-22],[14,-22],[18,-22],[22,-22],[-10,-18],[-6,-18],[-2,-18],[2,-18],[6,-18],[10,-18],[14,-18],[18,-18],[-14,-14],[-10,-14],[-6,-14],[-2,-14],[2,-14],[6,-14],[10,-14],[14,-14],[18,-14],[-10,-10],[-6,-10],[-2,-10],[2,-10],[6,-10],[10,-10],[14,-10],[18,-10],[-14,-6],[-10,-6],[-6,-6],[-2,-6],[2,-6],[6,-6],[10,-6],[14,-6],[18,-6],[-18,-2],[-14,-2],[-10,-2],[-6,-2],[-2,-2],[2,-2],[6,-2],[10,-2],[14,-2],[18,-2],[22,-2],[-22,2],[-18,2],[-14,2],[-10,2],[-6,2],[-2,2],[2,2],[6,2],[10,2],[14,2],[18,2],[22,2],[-22,6],[-18,6],[-14,6],[-10,6],[-6,6],[-2,6],[2,6],[6,6],[10,6],[14,6],[18,6],[22,6],[-22,10],[-18,10],[-14,10],[-10,10],[-6,10],[-2,10],[2,10],[6,10],[10,10],[14,10],[18,10],[-22,14],[-18,14],[-14,14],[-10,14],[-6,14],[-2,14],[2,14],[6,14],[10,14],[14,14],[18,14],[-22,18],[-18,18],[-14,18],[-10,18],[-6,18],[-2,18],[2,18],[6,18],[10,18],[14,18],[-18,22],[-14,22],[-10,22],[-6,22],[-2,22],[2,22],[6,22],[10,22],[14,22],[-18,26],[-14,26],[-10,26],[-6,26],[-2,26],[2,26],[6,26],[10,26],[-18,30],[-14,30],[-10,30],[-6,30],[-2,30],[2,30],[6,30],[10,30],[-14,34],[-10,34],[-6,34],[-2,34],[6,34],[-14,38],[-10,38],[-6,38],[-2,38],[-14,42],[-10,42],[-6,42],[-10,46]],[[2,-26],[-10,-22],[-6,-22],[-2,-22],[2,-22],[6,-22],[10,-22],[14,-22],[-14,-18],[-10,-18],[-6,-18],[-2,-18],[2,-18],[6,-18],[-18,-14],[-14,-14],[-10,-14],[-6,-14],[-2,-14],[2,-14],[-22,-10],[-18,-10],[-14,-10],[-10,-10],[-6,-10],[-2,-10],[-22,-6],[-18,-6],[-14,-6],[-10,-6],[-6,-6],[-2,-6],[-22,-2],[-18,-2],[-14,-2],[-10,-2],[-6,-2],[-2,-2],[-26,2],[-22,2],[-18,2],[-14,2],[-10,2],[-6,2],[-2,2],[2,2],[6,2],[-22,6],[-18,6],[-14,6],[-10,6],[-6,6],[-2,6],[2,6],[6,6],[10,6],[18,6],[22,6],[-22,10],[-18,10],[-14,10],[-10,10],[-6,10],[-2,10],[2,10],[6,10],[10,10],[14,10],[18,10],[-18,14],[-14,14],[-10,14],[-6,14],[-2,14],[2,14],[6,14],[10,14],[14,14],[18,14],[-18,18],[-14,18],[-10,18],[-6,18],[-2,18],[2,18],[6,18],[10,18],[14,18],[-6,22],[-2,22],[2,22],[6,22]],[[38,-34],[-10,-30],[-6,-30],[-2,-30],[2,-30],[6,-30],[10,-30],[30,-30],[34,-30],[38,-30],[42,-30],[46,-30],[50,-30],[54,-30],[-30,-26],[-26,-26],[-22,-26],[-18,-26],[-14,-26],[-10,-26],[-6,-26],[-2,-26],[2,-26],[6,-26],[10,-26],[14,-26],[18,-26],[22,-26],[26,-26],[30,-26],[34,-26],[38,-26],[42,-26],[46,-26],[-38,-22],[-34,-22],[-30,-22],[-26,-22],[-22,-22],[-18,-22],[-14,-22],[-10,-22],[-6,-22],[-2,-22],[2,-22],[6,-22],[10,-22],[14,-22],[18,-22],[22,-22],[26,-22],[30,-22],[34,-22],[38,-22],[42,-22],[-42,-18],[-38,-18],[-34,-18],[-30,-18],[-26,-18],[-22,-18],[-18,-18],[-14,-18],[-10,-18],[-6,-18],[-2,-18],[2,-18],[6,-18],[10,-18],[14,-18],[18,-18],[22,-18],[26,-18],[30,-18],[34,-18],[38,-18],[-46,-14],[-42,-14],[-38,-14],[-34,-14],[-30,-14],[-26,-14],[-22,-14],[-18,-14],[-14,-14],[-10,-14],[-6,-14],[-2,-14],[2,-14],[6,-14],[10,-14],[14,-14],[18,-14],[22,-14],[26,-14],[30,-14],[-54,-10],[-50,-10],[-46,-10],[-42,-10],[-38,-10],[-34,-10],[-30,-10],[-26,-10],[-22,-10],[-18,-10],[-14,-10],[-10,-10],[-6,-10],[-2,-10],[2,-10],[6,-10],[10,-10],[14,-10],[18,-10],[22,-10],[26,-10],[30,-10],[46,-10],[50,-10],[54,-10],[58,-10],[-58,-6],[-54,-6],[-50,-6],[-46,-6],[-42,-6],[-38,-6],[-34,-6],[-30,-6],[-26,-6],[-22,-6],[-18,-6],[-14,-6],[-10,-6],[-6,-6],[-2,-6],[2,-6],[6,-6],[10,-6],[14,-6],[18,-6],[22,-6],[26,-6],[30,-6],[38,-6],[42,-6],[46,-6],[50,-6],[54,-6],[-58,-2],[-54,-2],[-50,-2],[-46,-2],[-42,-2],[-38,-2],[-34,-2],[-30,-2],[-26,-2],[-22,-2],[-18,-2],[-14,-2],[-10,-2],[-6,-2],[-2,-2],[2,-2],[6,-2],[10,-2],[14,-2],[18,-2],[22,-2],[26,-2],[30,-2],[34,-2],[38,-2],[42,-2],[46,-2],[50,-2],[-54,2],[-50,2],[-46,2],[-42,2],[-38,2],[-34,2],[-30,2],[-26,2],[-22,2],[-18,2],[-14,2],[-10,2],[-6,2],[-2,2],[2,2],[6,2],[10,2],[14,2],[18,2],[22,2],[26,2],[30,2],[34,2],[38,2],[42,2],[46,2],[50,2],[-54,6],[-50,6],[-46,6],[-42,6],[-38,6],[-34,6],[-30,6],[-26,6],[-22,6],[-18,6],[-14,6],[-10,6],[-6,6],[-2,6],[2,6],[6,6],[10,6],[14,6],[18,6],[22,6],[26,6],[30,6],[34,6],[38,6],[42,6],[46,6],[-54,10],[-50,10],[-46,10],[-42,10],[-38,10],[-34,10],[-30,10],[-26,10],[-22,10],[-18,10],[-14,10],[-10,10],[-6,10],[-2,10],[2,10],[6,10],[10,10],[14,10],[18,10],[22,10],[26,10],[30,10],[34,10],[38,10],[42,10],[-50,14],[-46,14],[-42,14],[-38,14],[-34,14],[-30,14],[-26,14],[-22,14],[-18,14],[-14,14],[-10,14],[-6,14],[-2,14],[2,14],[6,14],[10,14],[14,14],[18,14],[22,14],[26,14],[30,14],[34,14],[38,14],[-46,18],[-42,18],[-38,18],[-34,18],[-30,18],[-26,18],[-22,18],[-18,18],[-14,18],[-10,18],[-6,18],[-2,18],[2,18],[6,18],[10,18],[14,18],[18,18],[22,18],[26,18],[-34,22],[-30,22],[-26,22],[-22,22],[-18,22],[-14,22],[-10,22],[-6,22],[-2,22],[2,22],[6,22],[10,22],[14,22],[18,22],[22,22],[-30,26],[-26,26],[-22,26],[-18,26],[-14,26],[-10,26],[-6,26],[-2,26],[-30,30],[-26,30],[-22,30],[-14,30]],[[-2,-34],[2,-34],[-6,-30],[-2,-30],[2,-30],[6,-30],[-14,-26],[-10,-26],[-6,-26],[-2,-26],[2,-26],[6,-26],[10,-26],[-18,-22],[-14,-22],[-10,-22],[-6,-22],[-2,-22],[2,-22],[6,-22],[10,-22],[14,-22],[18,-22],[-22,-18],[-18,-18],[-14,-18],[-10,-18],[-6,-18],[-2,-18],[2,-18],[6,-18],[10,-18],[14,-18],[18,-18],[-22,-14],[-18,-14],[-14,-14],[-10,-14],[-6,-14],[-2,-14],[2,-14],[6,-14],[10,-14],[14,-14],[18,-14],[22,-14],[-26,-10],[-22,-10],[-18,-10],[-14,-10],[-10,-10],[-6,-10],[-2,-10],[2,-10],[6,-10],[10,-10],[14,-10],[18,-10],[22,-10],[26,-10],[-26,-6],[-22,-6],[-18,-6],[-14,-6],[-10,-6],[-6,-6],[-2,-6],[2,-6],[6,-6],[10,-6],[14,-6],[18,-6],[22,-6],[26,-6],[-30,-2],[-26,-2],[-22,-2],[-18,-2],[-14,-2],[-10,-2],[-6,-2],[-2,-2],[2,-2],[6,-2],[10,-2],[14,-2],[18,-2],[22,-2],[-26,2],[-22,2],[-18,2],[-14,2],[-10,2],[-6,2],[-2,2],[2,2],[6,2],[10,2],[14,2],[18,2],[22,2],[-26,6],[-22,6],[-18,6],[-14,6],[-10,6],[-6,6],[-2,6],[2,6],[6,6],[10,6],[14,6],[18,6],[22,6],[-22,10],[-18,10],[-14,10],[-10,10],[-6,10],[-2,10],[2,10],[6,10],[10,10],[14,10],[18,10],[-18,14],[-14,14],[-10,14],[-6,14],[-2,14],[2,14],[6,14],[10,14],[14,14],[-14,18],[-10,18],[-6,18],[-2,18],[2,18],[6,18],[-10,22],[-6,22],[-2,22],[2,22],[6,22],[-10,26],[-6,26],[-2,26],[2,26],[-6,30],[-2,30]]];
 const asteroidAtlas = new Image();
@@ -827,6 +852,12 @@ function updateFortressAttack(enemy, dt) {
   }
   enemy.charge = undefined;
   enemy.fire = FORTRESS_INTERVAL;
+  if (!audio.muted && audio.volume > 0) {
+    for (const sound of fortressSounds) {
+      sound.currentTime = 0;
+      sound.play().catch(() => {});
+    }
+  }
 }
 
 function drawFortressCharge(enemy) {
@@ -905,33 +936,57 @@ function interceptorTilt(current, verticalTravel, dt) {
   return current + (target - current) * (1 - Math.exp(-14 * dt));
 }
 
-const hyperspaceShipArt = loadArt('art/ship-hyperspace.png');
+const shipEchoArt = loadArt('art/ship-echo.png');
+const shipPulseArt = loadArt('art/ship-pulse.png');
 
-function hyperspaceShipFrame(time) {
-  if (!singularityEntrance(time)) return null;
-  const offset = time - BOSS_START;
-  return offset < 0 ? Math.min(3, Math.floor((time - HYPERSPACE_START) / (BOSS_START - HYPERSPACE_START) * 4))
-    : 4 + Math.min(3, Math.floor(offset / .325));
+function drawShipPulse(effect, time) {
+  if (!effect || !loadedArt(shipPulseArt)) return;
+  const frame = Math.floor((time - effect.start) / .09);
+  if (frame < 0 || frame >= 6) return;
+  g.drawImage(shipPulseArt, frame % 3 * 192, Math.floor(frame / 3) * 112,
+    192, 112, effect.x - 96, effect.y - 56, 192, 112);
+}
+
+function drawWarpEchoes(time, strength) {
+  if (!loadedArt(shipEchoArt)) return;
+  for (let i = 3; i >= 1; i--) {
+    const age = i * .10;
+    const targetTime = time - age;
+    const next = warpPoses.findIndex(pose => pose.time >= targetTime);
+    if (next < 1) continue;
+    const before = warpPoses[next - 1], after = warpPoses[next];
+    const weight = (targetTime - before.time) / (after.time - before.time);
+    const x = before.x + (after.x - before.x) * weight;
+    const y = before.y + (after.y - before.y) * weight;
+    const tilt = before.tilt + (after.tilt - before.tilt) * weight;
+    g.save();
+    g.translate(x - age * (75 + strength * 175), y);
+    g.rotate(tilt);
+    g.scale(1 + age * .55, 1);
+    g.globalAlpha = strength * (.58 - age * 1.45);
+    g.drawImage(shipEchoArt, -36, -19, 72, 36);
+    g.restore();
+  }
 }
 
 function drawInterceptor() {
   if (inv > 0 && Math.floor(inv * 18) % 2 !== 0) return;
+  const time = audio.currentTime;
+  const strength = smooth(HYPERSPACE_START, BOSS_START, time)
+    * (1 - smooth(BOSS_START, BOSS_START + 1.3, time));
+  if (strength > 0) drawWarpEchoes(time, strength);
   g.save();
   g.translate(Math.round(ship.x), Math.round(ship.y));
   g.rotate(ship.tilt);
   g.imageSmoothingEnabled = false;
-  const frame = hyperspaceShipFrame(audio.currentTime);
-  if (frame !== null && loadedArt(hyperspaceShipArt)) {
-    const scale = 70 / 168;
-    g.drawImage(hyperspaceShipArt, frame % 4 * 320, Math.floor(frame / 4) * 112,
-      320, 112, -35 - 144 * scale, -18 - 12 * scale, 320 * scale, 112 * scale);
-    g.restore();
-    return;
-  }
   if (loadedArt(shipArt)) {
     if (inv > 0) g.filter = 'brightness(2.3)';
     const height = 70 * shipArt.naturalHeight / shipArt.naturalWidth;
     g.drawImage(shipArt, -35, Math.round(-height * .545), 70, height);
+    if (strength > 0 && loadedArt(shipEchoArt)) {
+      g.globalAlpha = strength * .93;
+      g.drawImage(shipEchoArt, -36, -19, 72, 36);
+    }
   } else {
     g.fillStyle = dark;
     rect(-25, -6, 59, 12);
@@ -1125,7 +1180,8 @@ for (const p of particles) {
   g.fillStyle = p.color || dark;
   rect(p.x, p.y, p.color ? 2 : 3, p.color ? 2 : 3);
 }
-if(phase>0&&phase<.5){g.strokeStyle=dark;g.lineWidth=3;g.beginPath();g.arc(ship.x,ship.y,(.5-phase)*1700,0,Math.PI*2);g.stroke()}
+drawShipPulse(dropPulse, audio.currentTime);
+drawShipPulse(pulseVisual, audio.currentTime);
 g.fillStyle=dark;g.fillRect(0,0,960,38);g.fillStyle=bg;g.font='bold 15px "Pulse Serif", serif';g.fillText('PULSE / '+String(level).padStart(2,'0'),18,25);g.fillText('SCORE '+String(score).padStart(7,'0'),200,25);g.fillText('CASCO ∞ INVENCÍVEL',490,25);g.fillText(automaticFire ? 'TIRO AUTOMÁTICO' : 'TIRO MANUAL', 315, 25);g.fillText(cooldown>0?'PULSO '+Math.ceil(cooldown)+'s':'PULSO PRONTO',735,25);
 if(phase>.6&&!(audio.currentTime>=162&&audio.currentTime<176)&&!bossMode&&!(audio.currentTime>=304&&audio.currentTime<307)){g.fillStyle=dark;g.fillRect(300,185,420,70);g.fillStyle=bg;g.textAlign='center';g.font='bold 23px "Pulse Serif", serif';g.fillText('SETOR '+level+' / '+names[(level-1)%5]+' / '+drive.toFixed(1)+'×',510,228);g.textAlign='left'}g.fillStyle=dark;g.font='12px "Pulse Serif", serif';g.fillText('BASS / 20–160 Hz',18,466);g.strokeStyle=dark;g.strokeRect(158,456,125,8);g.fillRect(160,458,121*energy,4);g.fillText('WARP '+drive.toFixed(1)+'×',800,466);
 const palette=smooth(166,173,audio.currentTime)*(1-smooth(304,309,audio.currentTime));canvas.style.filter='invert('+palette+')';g.fillStyle='#26371d0a';for(let y=0;y<480;y+=4)g.fillRect(0,y,960,1);}
