@@ -30,6 +30,9 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
 .launch-film{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;background:#000;pointer-events:none}
+.fx-layer{position:absolute;inset:0;pointer-events:none}
+.fx-layer canvas{width:100%;height:100%;image-rendering:pixelated}
+
 </style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V53</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art" aria-hidden="true"></div><video id="launchFilm" class="launch-film" src="art/menu-launch.webm" preload="auto" muted playsinline aria-hidden="true" hidden></video>
 <div class="menu-content">
@@ -38,7 +41,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 <p class="menu-copy" id="menuControls" hidden>Setas ou WASD para mover. T alterna entre tiro automático e manual. No manual, pressione ou segure F para atirar. Espaço para o pulso de defesa. P ou Esc para pausar. No toque, arraste para mover e toque duas vezes para o pulso.</p>
 <label class="menu-copy" id="menuAudio" hidden>Volume <input id="menuVolume" aria-label="Volume da música" type="range" min="0" max="1" step=".05" value=".7"></label>
 <button type="button" class="menu-back" id="menuBack" hidden>← Voltar</button>
-</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><nav aria-label="Timeline e atalhos de fase"><button id="bossPreview">TESTAR 2:47</button><div class="bar" id="timeline" aria-label="Ir para um setor"><i id="progress"></i></div><button type="button" id="nextSector">PRÓXIMA FASE →</button><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
+</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><nav aria-label="Timeline e atalhos de fase"><button id="bossPreview">TESTAR 2:47</button><div class="bar" id="timeline" aria-label="Ir para um setor"><i id="progress"></i></div><button type="button" id="nextSector">PRÓXIMA FASE →</button><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script src="vendor/phaser.min.js"></script><script src="visual-fx.js"></script><script>
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('c'),g=canvas.getContext('2d'),audio=$('music');const GAME_WIDTH = 960;
 const renderScale = canvas.width / GAME_WIDTH;
@@ -133,7 +136,7 @@ function showMenu(page, message = '') {
   $('menuBack').hidden = !['controls','audio'].includes(page);
   $('menuOptions').replaceChildren();
   const options = page === 'home' ? [['Iniciar', () => start(true, true)],
-    ['Controles', () => showMenu('controls')], ['Áudio', () => showMenu('audio')]] :
+    ['Amostra · 20 s', () => startSample()], ['Controles', () => showMenu('controls')], ['Áudio', () => showMenu('audio')]] :
     page === 'pause' ? [['Continuar', () => start()], ['Reiniciar', () => start(true)],
     ['Voltar ao menu', goHome]] : page === 'result' ? [['Voltar ao menu', goHome]] : [];
   options.forEach(([label, action], i) => {
@@ -188,8 +191,13 @@ function playLaunchFilm() {
     film.play().catch(finish);
   });
 }
-async function start(fresh = false, animate = false) {
+let sampleActive = false;
+function startSample() {
+  return start(true, false, true);
+}
+async function start(fresh = false, animate = false, sample = false) {
   if (openingGame || seekingSector) return;
+  if (fresh) sampleActive = sample;
   openingGame = true;
   const session = ++uiSession;
   const overlay = $('overlay');
@@ -233,7 +241,8 @@ function pause() {
 }
 function end(win = false) {
   playing = false; started = false; audio.pause(); stopRadio();
-  showMenu('result', win ? 'Sinal completo' : 'Sinal perdido');
+  showMenu('result', sampleActive ? 'Amostra concluída' : win ? 'Sinal completo' : 'Sinal perdido');
+  sampleActive = false;
   $('desc').textContent = score.toLocaleString('pt-BR') + ' pontos';
 }
 function burst(x,y,n=12){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*230,vy:(Math.random()-.5)*230,t:.3+Math.random()*.5})}
@@ -252,6 +261,7 @@ function collideWithObject(object) {
 }
 let seekingSector = false;
 async function seekSector(seconds) {
+  sampleActive = false;
   if (seekingSector) return;
   seekingSector = true;
   stopRadio();
@@ -930,6 +940,7 @@ function updateFortressAttack(enemy, dt) {
     hostile.push({x, y, vx: Math.cos(angle) * FORTRESS_SHOT_SPEED,
       vy: Math.sin(angle) * FORTRESS_SHOT_SPEED, fortress: true});
   }
+  enemy.recoilAt = audio.currentTime;
   enemy.charge = undefined;
   enemy.fire = FORTRESS_INTERVAL;
   if (!audio.muted && audio.volume > 0) {
@@ -992,6 +1003,10 @@ function shipTouches(x, y, radius) {
   });
 }
 function drawSpace() {
+  const time = audio.currentTime;
+  const radio = time >= RADIO_START && time < RADIO_END;
+  const warp = smooth(HYPERSPACE_START, BOSS_START, time) *
+    (1 - smooth(BOSS_START, HYPERSPACE_END, time));
   if (loadedArt(spaceArt)) {
     g.drawImage(spaceArt, -22 - audio.currentTime % 960 * .025, -28, 1020, 574);
   }
@@ -1002,12 +1017,23 @@ function drawSpace() {
     const width = [210, 300, 370][layer];
     const height = width * image.naturalHeight / image.naturalWidth;
     const span = 960 + width * 2 + 75;
-    const x = 960 + 40 - ((travel * [.08,.22,.46][layer] + i * 281) % span);
+    const x = 960 + 40 - (((travel + warp * 280) * [.08,.22,.46][layer] + i * 281) % span);
     const y = [125, 281, 83, 338, 38, 414][i];
-    g.globalAlpha = [.22,.28,.37][layer];
+    g.globalAlpha = [.22,.28,.37][layer] * (radio ? .42 : 1);
     g.drawImage(image, x, y, width, height);
   }
   g.globalAlpha = 1;
+  if ((level - 1) % 5 === 1 && loadedArt(asteroidAtlas)) {
+    g.globalAlpha = .22;
+    for (let i = 0; i < 10; i++) {
+      const [sx, sy] = asteroidCells[i % 5];
+      const x = 980 - ((time * (28 + i % 3 * 12) + i * 137) % 1000);
+      const size = 8 + i % 4 * 3;
+      g.drawImage(asteroidAtlas, sx, sy, 128, 128, Math.round(x),
+        i % 2 ? 83 + i * 7 : 360 + i * 6, size, size);
+    }
+    g.globalAlpha = 1;
+  }
 }
 function interceptorTilt(current, verticalTravel, dt) {
   const maxTilt = 8 * Math.PI / 180;
@@ -1253,9 +1279,12 @@ drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);dr
     const height = width * fortressArt.naturalHeight / fortressArt.naturalWidth;
     g.save();
     g.imageSmoothingEnabled = false;
-    g.drawImage(fortressArt, Math.round(e.x - width / 2), Math.round(e.y - height / 2), width, height);
+    const recoil = Math.max(0, 1 - (audio.currentTime - (e.recoilAt ?? -1)) / .14);
+    g.drawImage(fortressArt, Math.round(e.x - width / 2 + recoil * 5), Math.round(e.y - height / 2), width, height);
     g.restore();
     drawFortressCharge(e);
+    if (recoil) { g.fillStyle = "#ffe3a5"; const muzzle = fortressMuzzles(e);
+      for (const y of [muzzle.upper, (muzzle.upper + muzzle.lower) / 2, muzzle.lower]) rect(muzzle.x - 4, y - 1, 5, 3); }
     continue;
   }
   if (e.kind === 0 && loadedArt(crescentArt)) {
@@ -1264,6 +1293,11 @@ drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);dr
     g.save();
     g.imageSmoothingEnabled = false;
     g.drawImage(crescentArt, Math.round(e.x) - 19, Math.round(e.y - height * .53), width, height);
+    if (e.fire < .22) {
+      g.globalAlpha = Math.max(0, 1 - e.fire / .22);
+      g.fillStyle = '#ffcb72';
+      rect(e.x + CRESCENT_MUZZLE_X, e.y - 1, 3, 3);
+    }
     g.restore();
     continue;
   }
@@ -1364,5 +1398,7 @@ function drawRadio() {
   g.restore();
 }
 
-function loop(now){const dt=Math.min(.04,(now-last)/1000||.016);last=now;if(playing&&!seekingSector){update(dt);updateRadio();draw();drawRadio();}requestAnimationFrame(loop)}showMenu('home');requestAnimationFrame(loop);
+function loop(now){const dt=Math.min(.04,(now-last)/1000||.016);last=now;if(playing&&!seekingSector){update(dt);updateRadio();draw();drawRadio();
+if (sampleActive && audio.currentTime >= 20) end(true);}window.pulseFX?.render(audio.currentTime, energy, ship, inv, menuPage !== 'game');
+requestAnimationFrame(loop)}showMenu('home');window.pulseFX?.mount();requestAnimationFrame(loop);
 </script></html>
