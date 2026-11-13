@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @keyframes depart{70%{opacity:1}to{opacity:0}}
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.menu-art,.menu-stars,.menu-flame{animation:none}.game-menu.launching,.game-menu.launching .menu-ship{animation:none}}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V37</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V38</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art"></div><div class="menu-ruins"></div><div class="menu-stars"></div><div class="menu-shade"></div>
 <div class="menu-ship"><img src="art/ship.webp" alt=""><span class="menu-flame"></span></div>
 <div class="menu-content">
@@ -58,14 +58,14 @@ const smooth=(a,b,t)=>{const x=Math.max(0,Math.min(1,(t-a)/(b-a)));return x*x*(3
 const warpStars=Array.from({length:180},(_,i)=>({angle:i*2.39996323,seed:(i*.61803398875)%1,weight:1+(i%3)}));
 const BOSS_START=167,BOSS_END=304;let entryPulseDone=false,entryPulseX=110,entryPulseY=240;let bossMode=false,bossWasActive=false;
 let ctx,analyser,bins,source,playing=false,started=false,last=0,shot=0,spawn=0,beat=0,avg=.15,lastBeat=-1,energy=0,score=0,kills=0,level=1,hp=5,inv=0,cooldown=0,phase=0,frame=0;
-let ship={x:110,y:240,tilt:0},enemies=[],bullets=[],hostile=[],particles=[],keys={},pointer=null;const dark='#e4d4aa',bg='#17111a';
+let ship={x:110,y:240,tilt:0,flash:0},enemies=[],bullets=[],hostile=[],particles=[],keys={},pointer=null;const dark='#e4d4aa',bg='#17111a';
 const stars=Array.from({length:90},()=>({x:Math.random()*960,y:Math.random()*480,s:Math.random()*2+1}));
 const names=['PORTADORA','OSCILAÇÃO','INTERFERÊNCIA','RESSONÂNCIA','HIPERESPAÇO'];
 function initAudio(){if(ctx)return;ctx=new AudioContext();source=ctx.createMediaElementSource(audio);analyser=ctx.createAnalyser();analyser.fftSize=2048;source.connect(analyser);analyser.connect(ctx.destination);bins=new Uint8Array(analyser.frequencyBinCount);
 bassFilter=ctx.createBiquadFilter();bassFilter.type='lowpass';bassFilter.frequency.value=160;bassFilter.Q.value=.707;
 bassAnalyser=ctx.createAnalyser();bassAnalyser.fftSize=2048;bassBins=new Float32Array(bassAnalyser.fftSize);
 source.connect(bassFilter);bassFilter.connect(bassAnalyser)}
-function reset(){asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240,tilt:0};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
+function reset(){asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240,tilt:0,flash:0};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
 let menuPage = 'home', menuSelection = 0, openingGame = false, launchTimer = 0, uiSession = 0;
 const menuButtons = () => [...$('menuOptions').querySelectorAll('button')];
 function chooseMenu(index, focus = true) {
@@ -334,7 +334,15 @@ ship.y = Math.max(55, Math.min(445, ship.y + impactVY * dt));
 const recoilDamping = Math.exp(-7 * dt);
 impactVX *= recoilDamping;
 impactVY *= recoilDamping;
-shot-=dt;if(shot<=0&&!(t>=162&&t<175)){bullets.push({x:ship.x+SHIP_NOSE,y:ship.y});shot=.16-energy*.055}spawn-=dt;if(spawn<=0&&!serafimActive(t)&&!bossMode&&!(t>=RADIO_START&&t<CENTIPEDE_START)&&!(t>=162&&t<BOSS_END)){wave();spawn=Math.max(.9,3.1-level*.08-energy*.7)+(t>=RADIO_START-10&&t<RADIO_START? (t-(RADIO_START-10))*.7:0)}for(const b of bullets)b.x+=650*dt;for(const e of enemies){e.t+=dt;const speed = 100 + Math.min(level, 15) * 6 + energy * 50;
+ship.flash = Math.max(0, ship.flash - dt);
+shot -= dt;
+if (shot <= 0 && !(t >= 162 && t < 175)) {
+  const {x, y} = interceptorMuzzle();
+  bullets.push({x, y});
+  ship.flash = .055;
+  shot = .16 - energy * .055;
+}
+spawn-=dt;if(spawn<=0&&!serafimActive(t)&&!bossMode&&!(t>=RADIO_START&&t<CENTIPEDE_START)&&!(t>=162&&t<BOSS_END)){wave();spawn=Math.max(.9,3.1-level*.08-energy*.7)+(t>=RADIO_START-10&&t<RADIO_START? (t-(RADIO_START-10))*.7:0)}for(const e of enemies){e.t+=dt;const speed = 100 + Math.min(level, 15) * 6 + energy * 50;
 const sway = Math.min(65, 45 + level * 2);
 const heavy = e.kind === 1;
 e.x -= speed * (heavy ? .65 : 1) * dt;
@@ -346,7 +354,12 @@ if (heavy) {
   fireEnemyShot(e);
   e.fire = Math.max(.6, 2.2 - level * .06);
 }
-for(const b of bullets){if(!b.dead&&Math.hypot(b.x-e.x,b.y-e.y)<e.r+7){b.dead=true;e.hp--;burst(b.x,b.y,3)}}if(e.hp<=0&&!e.dead){e.dead=true;score+=e.kind?500:100;kills++;burst(e.x,e.y,24)}}for(const b of hostile){b.x+=b.vx*dt;b.y+=b.vy*dt}updateSerafim(t);
+}
+for (const enemy of enemies) {
+  if (!enemy.dead && enemy.hp <= 0) defeatEnemy(enemy);
+}
+for(const b of hostile){b.x+=b.vx*dt;b.y+=b.vy*dt}updateSerafim(t);
+updatePlayerShots(dt, t);
 if (inv <= 0) {
   const rock = ringRocks(t).find(asteroidTouchesShip);
   const enemy = enemies.find(object => !object.dead && shipTouches(object.x, object.y, object.r));
@@ -588,18 +601,106 @@ function updateSerafim(time) {
   if (!serafimActive(time)) { serafimAim = null; return; }
   const state = serafimState(time);
   aimSerafim(state, time);
-  for (const drone of state.drones) {
-    for (const bullet of bullets) {
-      if (bullet.dead || Math.hypot(drone.x - bullet.x, drone.y - bullet.y) >= 16) continue;
-      bullet.dead = true;
-      const hits = (droneDamage.get(drone.id) || 0) + 1;
-      droneDamage.set(drone.id, hits);
-      if (hits >= 3) { score += 300; burst(drone.x, drone.y, 18); break; }
-    }
-  }
-  state.drones = state.drones.filter(drone => droneDamage.get(drone.id) !== 3);
   serafimFrame = state;
 }
+const PLAYER_SHOT_WIDTH = 16;
+const PLAYER_SHOT_HALF_HEIGHT = 2.5;
+
+function interceptorMuzzle() {
+  return {
+    x: Math.round(ship.x) + SHIP_NOSE * Math.cos(ship.tilt),
+    y: Math.round(ship.y) + SHIP_NOSE * Math.sin(ship.tilt)
+  };
+}
+
+function updatePlayerShots(dt, time) {
+  if (!bullets.length) return;
+  const targets = [];
+  for (const rock of ringRocks(time)) {
+    const scale = rock.radius / 64;
+    const cos = Math.cos(rock.angle), sin = Math.sin(rock.angle);
+    for (const [x, y] of asteroidMasks[rock.variant]) {
+      targets.push({x: rock.x + (x * cos - y * sin) * scale,
+        y: rock.y + (x * sin + y * cos) * scale, radius: 2.8 * scale});
+    }
+  }
+  targets.push(...centipedeSegments(time));
+  for (const enemy of enemies) {
+    if (!enemy.dead) targets.push({x: enemy.x, y: enemy.y, radius: enemy.r + 4, enemy});
+  }
+  if (serafimFrame) {
+    for (const drone of serafimFrame.drones) {
+      targets.push({...drone, radius: 13, drone});
+    }
+    // Cover the torso of the timed boss across the attack and idle poses.
+    if (time >= SERAFIM.combatStart) {
+      const {x, y, scale} = serafimPose;
+      for (const [cx, cy, radius] of [[216,105,35],[220,175,48],[219,250,42],[220,317,30]]) {
+        targets.push({x: x + cx * scale, y: y + cy * scale, radius: radius * scale});
+      }
+    }
+  }
+
+  for (const bullet of bullets) {
+    const end = bullet.x + 650 * dt;
+    const hit = firstPlayerShotHit(bullet, end, targets);
+    if (hit) {
+      bullet.dead = true;
+      playerShotImpact(hit.contactX, bullet.y, hit.target);
+    } else {
+      bullet.x = end;
+    }
+  }
+  if (serafimFrame) {
+    serafimFrame.drones = serafimFrame.drones.filter(drone => (droneDamage.get(drone.id) || 0) < 3);
+  }
+}
+
+function firstPlayerShotHit(bullet, end, targets) {
+  let first = null;
+  for (const target of targets) {
+    if (target.enemy?.dead || (target.drone && droneDamage.get(target.drone.id) >= 3)) continue;
+    const dy = Math.max(0, Math.abs(bullet.y - target.y) - PLAYER_SHOT_HALF_HEIGHT);
+    if (dy > target.radius) continue;
+    const reach = Math.sqrt(target.radius ** 2 - dy ** 2);
+    if (target.x + reach < bullet.x || target.x - reach > end + PLAYER_SHOT_WIDTH) continue;
+    const x = Math.max(bullet.x, target.x - reach - PLAYER_SHOT_WIDTH);
+    if (!first || x < first.x) first = {x, contactX: Math.max(bullet.x, target.x - reach), target};
+  }
+  return first;
+}
+
+function playerShotImpact(x, y, {enemy, drone}) {
+  for (let i = 0; i < 4; i++) {
+    particles.push({x, y, vx: (Math.random() - .5) * 125,
+      vy: (Math.random() - .5) * 125, t: .14 + Math.random() * .08, color: '#9ceaff'});
+  }
+  if (enemy && --enemy.hp <= 0) defeatEnemy(enemy);
+  if (drone) {
+    const hits = (droneDamage.get(drone.id) || 0) + 1;
+    droneDamage.set(drone.id, hits);
+    if (hits === 3) { score += 300; burst(drone.x, drone.y, 18); }
+  }
+}
+
+function defeatEnemy(enemy) {
+  enemy.dead = true;
+  score += enemy.kind ? 500 : 100;
+  kills++;
+  burst(enemy.x, enemy.y, 24);
+}
+
+function drawPlayerShot(bullet) {
+  if (loadedArt(playerShotArt)) {
+    g.drawImage(playerShotArt, Math.round(bullet.x), Math.round(bullet.y * 2) / 2 - 2.5, 16, 5);
+  } else {
+    g.save();
+    g.fillStyle = '#c9f7ff';
+    rect(bullet.x, bullet.y - 2, 16, 4);
+    g.restore();
+  }
+}
+
 const artFiles = Object.freeze({
   ship: 'art/ship.webp', space: 'art/space.webp', serafim: 'art/serafim.webp',
   drone: 'art/drone.webp', droneLit: 'art/drone-lit.webp',
@@ -697,6 +798,7 @@ function drawEnemyShot(shot) {
 }
 
 const shipArt = loadArt(artFiles.ship);
+const playerShotArt = loadArt('art/player-shot.png');
 const spaceArt = loadArt(artFiles.space);
 const serafimArt = loadArt(artFiles.serafim);
 const droneArt = loadArt(artFiles.drone);
@@ -898,7 +1000,7 @@ for(let x=0;x<=960;x+=6){const edge=j===0?77:426, sign=j===0?1:-1;const y=edge+s
 for(let j=0;j<3;j++){g.strokeStyle=j===1?'#26371d50':'#26371d24';g.lineWidth=1+energy*2;g.beginPath();for(let x=0;x<=960;x+=5){const y=245+Math.sin(x*.012-travel*.012+j*1.7)*(12+energy*85);x?g.lineTo(x,y):g.moveTo(x,y)}g.stroke()}
 g.strokeStyle='#26371d55';g.lineWidth=2;for(const r of rings){g.globalAlpha=Math.max(0,r.t)*.65;g.beginPath();g.ellipse(r.x,240,r.r*.45,r.r,0,0,Math.PI*2);g.stroke()}g.globalAlpha=1;
 for(let i=trail.length-1;i>0;i--){g.globalAlpha=(1-i/trail.length)*energy*.35;g.fillStyle='#df894f';rect(trail[i].x+SHIP_ENGINE-i*drive*4,trail[i].y-2,Math.min(14,i*drive*4),3)}g.globalAlpha=1;
-drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);drawWarp();drawSingularity();drawSerafim(audio.currentTime);g.fillStyle=dark;for(const b of bullets)rect(b.x,b.y-2,16,4);for(const b of hostile)drawEnemyShot(b);for(const e of enemies){
+drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);drawWarp();drawSingularity();drawSerafim(audio.currentTime);g.fillStyle=dark;for(const b of bullets)drawPlayerShot(b);for(const b of hostile)drawEnemyShot(b);for(const e of enemies){
   if (e.kind === 1 && loadedArt(fortressArt)) {
     const width = e.r * 2.4;
     const height = width * fortressArt.naturalHeight / fortressArt.naturalWidth;
@@ -918,7 +1020,19 @@ drawPlanetRing(ringRocks(audio.currentTime));drawCentipede(audio.currentTime);dr
     g.restore();
     continue;
   }
-  g.save();g.translate(Math.round(e.x),Math.round(e.y));const z=e.kind?2:1;g.scale(z,z);rect(-12,-8,20,16);rect(-18,-14,8,7);rect(-18,7,8,7);rect(5,-12,8,24);g.fillStyle=bg;rect(-5,-3,5,6);g.restore()}g.fillStyle=dark;drawInterceptor();g.fillStyle=dark;for(const p of particles)rect(p.x,p.y,3,3);if(phase>0&&phase<.5){g.strokeStyle=dark;g.lineWidth=3;g.beginPath();g.arc(ship.x,ship.y,(.5-phase)*1700,0,Math.PI*2);g.stroke()}
+  g.save();g.translate(Math.round(e.x),Math.round(e.y));const z=e.kind?2:1;g.scale(z,z);rect(-12,-8,20,16);rect(-18,-14,8,7);rect(-18,7,8,7);rect(5,-12,8,24);g.fillStyle=bg;rect(-5,-3,5,6);g.restore()}g.fillStyle=dark;drawInterceptor();
+if (ship.flash > 0) {
+  const {x, y} = interceptorMuzzle();
+  g.fillStyle = '#9ceaff';
+  rect(x - 1, y - 3, 3, 7);
+  g.fillStyle = '#f4ffff';
+  rect(x - 3, y - 1, 7, 3);
+}
+for (const p of particles) {
+  g.fillStyle = p.color || dark;
+  rect(p.x, p.y, p.color ? 2 : 3, p.color ? 2 : 3);
+}
+if(phase>0&&phase<.5){g.strokeStyle=dark;g.lineWidth=3;g.beginPath();g.arc(ship.x,ship.y,(.5-phase)*1700,0,Math.PI*2);g.stroke()}
 drawEntryPulse();g.fillStyle=dark;g.fillRect(0,0,960,38);g.fillStyle=bg;g.font='bold 15px monospace';g.fillText('PULSE / '+String(level).padStart(2,'0'),18,25);g.fillText('SCORE '+String(score).padStart(7,'0'),200,25);g.fillText('CASCO ∞ INVENCÍVEL',490,25);g.fillText(cooldown>0?'PULSO '+Math.ceil(cooldown)+'s':'PULSO PRONTO',735,25);
 if(phase>.6&&!(audio.currentTime>=162&&audio.currentTime<176)&&!bossMode&&!(audio.currentTime>=304&&audio.currentTime<307)){g.fillStyle=dark;g.fillRect(300,185,420,70);g.fillStyle=bg;g.textAlign='center';g.font='bold 23px monospace';g.fillText('SETOR '+level+' / '+names[(level-1)%5]+' / '+drive.toFixed(1)+'×',510,228);g.textAlign='left'}g.fillStyle=dark;g.font='12px monospace';g.fillText('BASS / 20–160 Hz',18,466);g.strokeStyle=dark;g.strokeRect(158,456,125,8);g.fillRect(160,458,121*energy,4);g.fillText('WARP '+drive.toFixed(1)+'×',800,466);
 const palette=smooth(166,173,audio.currentTime)*(1-smooth(304,309,audio.currentTime));canvas.style.filter='invert('+palette+')';g.fillStyle='#26371d0a';for(let y=0;y<480;y+=4)g.fillRect(0,y,960,1);}
