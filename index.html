@@ -30,7 +30,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
 .launch-film{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;background:#000;pointer-events:none}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V66</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V67</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art" aria-hidden="true"></div><canvas id="launchScene" class="launch-film" width="960" height="480" aria-hidden="true" hidden></canvas>
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
@@ -1262,7 +1262,7 @@ for (const p of particles) {
 }
 drawShipPulse(dropPulse, audio.currentTime);
 drawShipPulse(pulseVisual, audio.currentTime);
-g.fillStyle=dark;g.fillRect(0,0,960,38);g.fillStyle=bg;g.font='bold 15px "Pulse Serif", serif';g.fillText('PULSE / '+String(level).padStart(2,'0'),18,25);g.fillText('SCORE '+String(score).padStart(7,'0'),200,25);g.fillText('CASCO ' + hp + '/5',490,25);g.fillText(automaticFire ? 'TIRO AUTOMÁTICO' : 'TIRO MANUAL', 315, 25);g.fillText(cooldown>0?'PULSO '+Math.ceil(cooldown)+'s':'PULSO PRONTO',735,25);
+drawHud();
 if(phase>.6&&!(audio.currentTime>=162&&audio.currentTime<176)&&!bossMode&&!(audio.currentTime>=304&&audio.currentTime<307)){g.fillStyle=dark;g.fillRect(300,185,420,70);g.fillStyle=bg;g.textAlign='center';g.font='bold 23px "Pulse Serif", serif';g.fillText('SETOR '+level+' / '+names[(level-1)%5]+' / '+drive.toFixed(1)+'×',510,228);g.textAlign='left'}g.fillStyle=dark;g.font='12px "Pulse Serif", serif';g.fillText('BASS / 20–160 Hz',18,466);g.strokeStyle=dark;g.strokeRect(158,456,125,8);g.fillRect(160,458,121*energy,4);g.fillText('WARP '+drive.toFixed(1)+'×',800,466);
 const palette=smooth(166,173,audio.currentTime)*(1-smooth(304,309,audio.currentTime));canvas.style.filter='invert('+palette+')';g.fillStyle='#26371d0a';for(let y=0;y<480;y+=4)g.fillRect(0,y,960,1);}
 const RADIO_START = 71, RADIO_END = 110;
@@ -1359,4 +1359,4 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-</script><script src="launch.js"></script><script src="phase-tools.js"></script><script>showMenu('home');</script></html>
+</script><script src="hud.js"></script><script src="launch.js"></script><script src="phase-tools.js"></script><script>showMenu('home');</script></html>
