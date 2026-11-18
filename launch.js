@@ -2,7 +2,7 @@
 const launchAssets = Object.fromEntries(['pilot','cockpit','flame','fuselage','foreground','hangar'].map(name => [name, loadArt('art/launch-' + name + (name === 'hangar' ? '.webp' : '.png'))]));
 const launchReady = Promise.all(Object.values(launchAssets).map(image => image.decode()));
 launchReady.catch(() => {});
-const launchDuration = 7.1;
+const launchDuration = 8.45;
 const launchCanvas = $('launchScene');
 const launchContext = launchCanvas.getContext('2d');
 let cancelLaunch = null;
@@ -14,23 +14,26 @@ function renderLaunch(time) {
   c.clearRect(0, 0, 960, 480);
   c.imageSmoothingEnabled = false;
   c.drawImage(launchAssets.hangar, 0, 0, 960, 480);
-  const lift = launchEase((time - 5) / .7);
-  const acceleration = launchClamp((time - 5.65) / .9);
+  const lift = launchEase((time - 6.2) / .7);
+  const acceleration = launchClamp((time - 6.95) / .9);
   const shipX = 310 + 900 * acceleration * acceleration;
   const shipY = 248 - 64 * lift;
   const width = 450;
   const height = width * launchAssets.fuselage.height / launchAssets.fuselage.width;
   const cockpitX = shipX + 235;
   const cockpitY = shipY + 79;
-  const ignition = launchClamp((time - 4.65) / .5);
-  const vibration = time > 4.65 && time < 5.5 ? Math.sin(time * 71) * 1 : 0;
+  const ignition = launchClamp((time - 5.75) / .5);
+  const vibration = time > 5.75 && time < 6.7 ? Math.sin(time * 71) * 1 : 0;
   c.save();
   c.translate(0, vibration);
-  if (time > 4.65) {
+  if (time > 5.75) {
     const frame = Math.floor(time * 18) % 4;
-    const flameWidth = (55 + 100 * acceleration) * ignition;
-    c.drawImage(launchAssets.flame, frame * 128, 0, 128, 64,
-      shipX - flameWidth + 12, shipY + height * .48 - 17, flameWidth, 34);
+    const flameWidth = (90 + 150 * acceleration) * ignition;
+    const energyWidths = [101, 105, 110, 112];
+    const nozzleX = shipX + 10;
+    const nozzleY = shipY + height * .55;
+    c.drawImage(launchAssets.flame, frame * 128, 0, energyWidths[frame], 64,
+      nozzleX - flameWidth, nozzleY - 35, flameWidth, 70);
     for (let i = 0; i < 18; i++) {
       const progress = (time * 1.7 + i * .137) % 1;
       c.globalAlpha = (1 - progress) * ignition * .6;
@@ -40,17 +43,6 @@ function renderLaunch(time) {
     c.globalAlpha = 1;
   }
   c.drawImage(launchAssets.fuselage, shipX, shipY, width, height);
-  // Exterior step and grip have fixed coordinates relative to the cockpit.
-  if (time < 5.1) {
-    c.strokeStyle = '#a4875c'; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(cockpitX - 20, cockpitY + 20);
-    c.lineTo(cockpitX - 38, 396); c.lineTo(cockpitX - 16, 396);
-    c.lineTo(cockpitX + 2, cockpitY + 20); c.stroke();
-    for (let i = 0; i < 3; i++) {
-      const y = cockpitY + 38 + i * 18;
-      c.fillStyle = '#6c6051'; c.fillRect(cockpitX - 34, y, 24, 3);
-    }
-  }
   let frame, pilotX, pilotFoot;
   if (time < 1) {
     frame = Math.floor(time * 8) % 4;
@@ -79,8 +71,36 @@ function renderLaunch(time) {
   const canopyFrame = Math.round(launchClamp(opening) * 3);
   c.drawImage(launchAssets.cockpit, canopyFrame * 128, 0, 128, 128,
     cockpitX - 11, cockpitY - 98, 110, 110);
+  // Telescopic ladder keeps its upper mounts fixed to the fuselage.
+  const retraction = launchEase((time - 4.7) / .8);
+  const hatchClosure = launchEase((time - 5.5) / .2);
+  const mountX = cockpitX - 20;
+  const mountY = cockpitY + 20;
+  const ladderLength = (396 - mountY) * (1 - retraction);
+  if (retraction < 1) {
+    const lean = 18 * (1 - retraction);
+    c.strokeStyle = '#a4875c'; c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(mountX, mountY);
+    c.lineTo(mountX - lean, mountY + ladderLength);
+    c.moveTo(mountX + 22, mountY);
+    c.lineTo(mountX + 22 - lean, mountY + ladderLength);
+    c.stroke();
+    for (let i = 1; i <= 3; i++) {
+      const fraction = i / 3;
+      c.fillStyle = '#756951';
+      c.fillRect(Math.round(mountX - lean * fraction),
+        Math.round(mountY + ladderLength * fraction), 23, 3);
+    }
+  }
+  // The cover slides across the stowed ladder compartment.
+  if (time >= 4.7) {
+    c.fillStyle = '#171415'; c.fillRect(mountX - 3, mountY - 3, 29, 7);
+    c.fillStyle = '#a4875c'; c.fillRect(mountX - 3, mountY - 3, Math.round(29 * hatchClosure), 6);
+    c.fillStyle = '#dbbd83'; c.fillRect(mountX - 3, mountY - 3, Math.round(29 * hatchClosure), 1);
+  }
   c.restore();
-  const fade = Math.max(1 - launchEase(time / .25), launchEase((time - 6.5) / .6));
+  const fade = Math.max(1 - launchEase(time / .25), launchEase((time - 7.85) / .6));
   c.fillStyle = 'rgba(0,0,0,' + fade + ')'; c.fillRect(0, 0, 960, 480);
 }
 
@@ -106,8 +126,8 @@ async function playLaunchFilm() {
   return new Promise(resolve => {
     let request, previous = performance.now(), elapsed = 0, nextSound = 0;
     const sounds = [[1.3, 780, .12, 'square', .035], [1.4, 180, .55, 'triangle', .09],
-      [4.05, 160, .6, 'triangle', .09], [4.65, 65, .9, 'sawtooth', .045],
-      [5.4, 95, 1.05, 'sawtooth', .055]];
+      [4.05, 160, .6, 'triangle', .09], [4.7, 220, .8, 'triangle', .07], [5.68, 920, .08, 'square', .03],
+      [5.75, 65, .9, 'sawtooth', .045], [6.75, 95, 1.05, 'sawtooth', .055]];
     const voices = [];
     function finish() {
       cancelAnimationFrame(request);
