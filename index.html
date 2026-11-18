@@ -30,7 +30,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
 .launch-film{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;background:#000;pointer-events:none}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V64</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V65</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art" aria-hidden="true"></div><canvas id="launchScene" class="launch-film" width="960" height="480" aria-hidden="true" hidden></canvas>
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 <p class="menu-copy" id="menuControls" hidden>Setas ou WASD para mover. T alterna entre tiro automático e manual. No manual, pressione ou segure F para atirar. Espaço para o pulso de defesa. P ou Esc para pausar. No toque, arraste para mover e toque duas vezes para o pulso.</p>
 <label class="menu-copy" id="menuAudio" hidden>Volume <input id="menuVolume" aria-label="Volume da música" type="range" min="0" max="1" step=".05" value=".7"></label>
 <button type="button" class="menu-back" id="menuBack" hidden>← Voltar</button>
-</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><nav aria-label="Progresso da partida"><div class="bar" id="timeline" aria-label="Progresso da música"><i id="progress"></i></div><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
+</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><nav aria-label="Teste das fases"><label>FASE <select style="font:inherit;background:#202018;color:#ead8ad;max-width:230px" id="phaseSelect" aria-label="Selecionar fase"></select></label><button type="button" id="phaseGo">IR PARA FASE</button><button type="button" id="nextPhase">PRÓXIMA FASE →</button><div class="bar" id="timeline" aria-label="Clique para ir a um ponto da música"><i id="progress"></i></div><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('c'),g=canvas.getContext('2d'),audio=$('music');const GAME_WIDTH = 960;
 const renderScale = canvas.width / GAME_WIDTH;
@@ -117,6 +117,7 @@ bassFilter=ctx.createBiquadFilter();bassFilter.type='lowpass';bassFilter.frequen
 bassAnalyser=ctx.createAnalyser();bassAnalyser.fftSize=2048;bassBins=new Float32Array(bassAnalyser.fftSize);
 source.connect(bassFilter);bassFilter.connect(bassAnalyser)}
 function reset(){clearWarpEffects();asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240,tilt:0,flash:0};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
+let seekingPhase = false;
 let menuPage = 'home', menuSelection = 0, openingGame = false, uiSession = 0;
 const menuButtons = () => [...$('menuOptions').querySelectorAll('button')];
 function chooseMenu(index, focus = true) {
@@ -178,7 +179,7 @@ function showPlaying() {
   document.activeElement?.blur();
 }
 async function start(fresh = false, animate = false) {
-  if (openingGame) return;
+  if (openingGame || seekingPhase) return;
   openingGame = true;
   const session = ++uiSession;
   const overlay = $('overlay');
@@ -509,21 +510,28 @@ function asteroidTouchesShip(rock) {
   ));
 }
 function ringRocks(t) {
-  const sector = 1 + Math.floor(t / 32);
-  if (level !== sector || (sector - 1) % 5 !== 1) return [];
-  const elapsed = t % 32;
+  if (t >= BOSS_START && t < BOSS_END) return [];
+  const currentSector = 1 + Math.floor(t / 32);
   const rocks = [];
-  for (let index = 0; index < 31; index++) {
-    const age = elapsed - index * .96;
-    const x = 995 - age * (175 + (index % 4) * 18);
-    if (age < 0 || x < -50) continue;
-    const y = 85 + ((index * 113) % 320) + Math.sin(age + index) * 18;
-    rocks.push({x, y, radius: 32, variant: asteroidVariant(sector, index), angle: age * .6 + index});
+  // Include the previous emitter until its final asteroid leaves the viewport.
+  for (const sector of [currentSector - 1, currentSector]) {
+    if (sector < 1 || (sector - 1) % 5 !== 1) continue;
+    const sectorStart = (sector - 1) * 32;
+    if (sectorStart >= HYPERSPACE_START && sectorStart < BOSS_END) continue;
+    const elapsed = t - sectorStart;
+    for (let index = 0; index < 31; index++) {
+      const age = elapsed - index * .96;
+      const x = 995 - age * (175 + (index % 4) * 18);
+      if (age < 0 || x + 32 < 0) continue;
+      const y = 85 + ((index * 113) % 320) + Math.sin(age + index) * 18;
+      rocks.push({x, y, radius: 32, variant: asteroidVariant(sector, index),
+        angle: age * .6 + index});
+    }
   }
   return rocks;
 }
 function drawPlanetRing(rocks) {
-  if ((level - 1) % 5 !== 1 || bossMode) return;
+  if ((level - 1) % 5 === 1 && !bossMode) {
   g.save();
   g.translate(710, 350);
   g.rotate(-.25);
@@ -536,6 +544,7 @@ function drawPlanetRing(rocks) {
     g.stroke();
   }
   g.restore();
+  }
   if (!asteroidAtlas.complete || !asteroidAtlas.naturalWidth) return;
   for (const rock of rocks) {
     const [sx, sy] = asteroidCells[rock.variant];
@@ -1329,4 +1338,4 @@ function drawRadio() {
 }
 
 function loop(now){const dt=Math.min(.04,(now-last)/1000||.016);last=now;if(playing){update(dt);updateRadio();draw();drawRadio();}requestAnimationFrame(loop)}requestAnimationFrame(loop);
-</script><script src="launch.js"></script><script>showMenu('home');</script></html>
+</script><script src="launch.js"></script><script src="phase-tools.js"></script><script>showMenu('home');</script></html>
