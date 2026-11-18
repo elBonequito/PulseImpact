@@ -30,7 +30,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
 .launch-film{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;background:#000;pointer-events:none}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V65</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V66</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
 <div class="menu-art" aria-hidden="true"></div><canvas id="launchScene" class="launch-film" width="960" height="480" aria-hidden="true" hidden></canvas>
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
@@ -38,7 +38,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 <p class="menu-copy" id="menuControls" hidden>Setas ou WASD para mover. T alterna entre tiro automático e manual. No manual, pressione ou segure F para atirar. Espaço para o pulso de defesa. P ou Esc para pausar. No toque, arraste para mover e toque duas vezes para o pulso.</p>
 <label class="menu-copy" id="menuAudio" hidden>Volume <input id="menuVolume" aria-label="Volume da música" type="range" min="0" max="1" step=".05" value=".7"></label>
 <button type="button" class="menu-back" id="menuBack" hidden>← Voltar</button>
-</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><nav aria-label="Teste das fases"><label>FASE <select style="font:inherit;background:#202018;color:#ead8ad;max-width:230px" id="phaseSelect" aria-label="Selecionar fase"></select></label><button type="button" id="phaseGo">IR PARA FASE</button><button type="button" id="nextPhase">PRÓXIMA FASE →</button><div class="bar" id="timeline" aria-label="Clique para ir a um ponto da música"><i id="progress"></i></div><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script>
+</div></div></div><div id="gameTools" hidden><button type="button" id="pause">Ⅱ PAUSAR</button><nav aria-label="Teste das fases"><label>FASE <select style="font:inherit;background:#202018;color:#ead8ad;max-width:230px" id="phaseSelect" aria-label="Selecionar fase"></select></label><button type="button" id="phaseGo">IR PARA FASE</button><button type="button" id="nextPhase">PRÓXIMA FASE →</button><div class="bar" id="timeline" aria-label="Clique para ir a um ponto da música"><i id="progress"></i></div><span id="clock">00:00 / 15:33</span><label>VOL <input id="volume" aria-label="Volume" type="range" min="0" max="1" step=".05" value=".7"></label></nav></div></div><footer><span>LCD MONOCROMÁTICO · ONDAS SENOIDAIS · CENÁRIO GUIADO PELOS GRAVES</span><span id="touch">Arraste para pilotar · toque duplo para pulso</span><span id="status">AGUARDANDO PILOTO</span></footer></main><audio id="music" preload="metadata" src="set.m4a"></audio><script src="death.js"></script><script>
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('c'),g=canvas.getContext('2d'),audio=$('music');const GAME_WIDTH = 960;
 const renderScale = canvas.width / GAME_WIDTH;
@@ -116,7 +116,7 @@ function initAudio(){if(ctx)return;ctx=new AudioContext();initShotSound();source
 bassFilter=ctx.createBiquadFilter();bassFilter.type='lowpass';bassFilter.frequency.value=160;bassFilter.Q.value=.707;
 bassAnalyser=ctx.createAnalyser();bassAnalyser.fftSize=2048;bassBins=new Float32Array(bassAnalyser.fftSize);
 source.connect(bassFilter);bassFilter.connect(bassAnalyser)}
-function reset(){clearWarpEffects();asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240,tilt:0,flash:0};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
+function reset(){death=null;clearWarpEffects();asteroidBags.clear();droneDamage.clear();droneAim.clear();serafimFrame=null;serafimAim=null;stopRadio();impactVX=impactVY=0;audio.currentTime=0;ship={x:110,y:240,tilt:0,flash:0};enemies=[];bullets=[];hostile=[];particles=[];score=0;kills=0;hp=5;level=1;cooldown=0;inv=0;shot=0;spawn=0;avg=.15;lastBeat=-1;phase=0;bassFloor=.01;bassPeak=.03;bassEnv=0;bassRaw=0;drive=1;travel=0;rings=[];trail=[];shock=0;entryPulseDone=false;bossMode=false;bossWasActive=false}
 let seekingPhase = false;
 let menuPage = 'home', menuSelection = 0, openingGame = false, uiSession = 0;
 const menuButtons = () => [...$('menuOptions').querySelectorAll('button')];
@@ -198,6 +198,7 @@ async function start(fresh = false, animate = false) {
     if (session !== uiSession) return;
     // Render the starting position before revealing the arena or advancing the simulation.
     if (fresh) draw();
+    await Promise.all(Object.values(deathArt).map(image => image.decode().catch(() => {})));
     await audio.play();
     if (session !== uiSession) return;
     started = true;
@@ -222,7 +223,7 @@ async function start(fresh = false, animate = false) {
   }
 }
 function pause() {
-  if (!playing || menuPage !== 'game') return;
+  if (!playing || menuPage !== 'game' || death) return;
   audio.pause(); playing = false; keys = {}; pointer = null;
   stopRadio();
   showMenu('pause');
@@ -233,9 +234,10 @@ function end(win = false) {
   $('desc').textContent = score.toLocaleString('pt-BR') + ' pontos';
 }
 function burst(x,y,n=12){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*230,vy:(Math.random()-.5)*230,t:.3+Math.random()*.5})}
-function pulse(){if(!playing||cooldown>0||singularityEntrance(audio.currentTime))return;pulseVisual={x:ship.x,y:ship.y,start:audio.currentTime};cooldown=8;playPulseSound();hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
+function pulse(){if(death||!playing||cooldown>0||singularityEntrance(audio.currentTime))return;pulseVisual={x:ship.x,y:ship.y,start:audio.currentTime};cooldown=8;playPulseSound();hostile=[];for(const e of enemies){e.hp-=3;burst(e.x,e.y,5)}beat=1;phase=.5}
 let impactVX = 0, impactVY = 0;
-function collideWithObject(object) {
+function collideWithObject(object, cause = 'tiro') {
+  if (death) return;
   const dx = ship.x - object.x;
   const dy = ship.y - object.y;
   const distance = Math.hypot(dx, dy);
@@ -245,8 +247,8 @@ function collideWithObject(object) {
   impactVY = ny * 420;
   hp = Math.max(0, hp - 1);
   inv = .9;
-  burst(ship.x, ship.y, 18);
-  if (hp === 0) end();
+  if (hp > 0) burst(ship.x, ship.y, 18);
+  if (hp === 0) beginDeath(cause, object);
 }
 $('pause').onclick = () => playing ? pause() : start();
 $('menuBack').onclick = () => showMenu('home');
@@ -256,7 +258,7 @@ function setVolume(value) {
 }
 setVolume('.7');
 $('volume').oninput = $('menuVolume').oninput = event => setVolume(event.target.value);
-audio.onended = () => end(true);
+audio.onended = () => { if (!death) end(true); };
 window.addEventListener('keydown', event => {
   const code = event.code;
   if (menuPage !== 'game') {
@@ -274,6 +276,7 @@ window.addEventListener('keydown', event => {
     }
     return;
   }
+  if (death) return;
   if (event.target?.matches?.('input, summary, button')) return;
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Escape'].includes(code)) event.preventDefault();
   if ((code === 'KeyP' || code === 'Escape') && !event.repeat) { pause(); return; }
@@ -288,7 +291,7 @@ window.addEventListener('keydown', event => {
 });
 window.addEventListener('keyup', event => { keys[event.code] = false; });
 window.addEventListener('blur', () => { if (playing) pause(); });
-let tap=0;canvas.onpointerdown=e=>{if(menuPage!=='game')return;canvas.setPointerCapture(e.pointerId);movePointer(e);if(performance.now()-tap<300)pulse();tap=performance.now()};canvas.onpointermove=e=>{if(menuPage==='game'&&e.buttons)movePointer(e)};canvas.onpointerup=()=>pointer=null;canvas.onpointercancel=()=>pointer=null;function movePointer(e){const r=canvas.getBoundingClientRect();pointer={x:(e.clientX-r.left)/r.width*960,y:(e.clientY-r.top)/r.height*480}}
+let tap=0;canvas.onpointerdown=e=>{if(menuPage!=='game'||death)return;canvas.setPointerCapture(e.pointerId);movePointer(e);if(performance.now()-tap<300)pulse();tap=performance.now()};canvas.onpointermove=e=>{if(menuPage==='game'&&!death&&e.buttons)movePointer(e)};canvas.onpointerup=()=>pointer=null;canvas.onpointercancel=()=>pointer=null;function movePointer(e){const r=canvas.getBoundingClientRect();pointer={x:(e.clientX-r.left)/r.width*960,y:(e.clientY-r.top)/r.height*480}}
 function wave(){const y=90+Math.random()*300;const tough=level%4===0;for(let i=0;i<(tough?1:5);i++)enemies.push({x:1000+i*65,y,base:y,t:-i*.28,hp:tough?20:2+Math.floor(level/5),r:tough?35:12,fire:1.2+i*.35,kind:tough?1:0})}
 function update(dt){const t=audio.currentTime;
 updateSerafimImpact(t);
@@ -393,8 +396,13 @@ if (inv <= 0 && !enteringSingularity) {
     );
   const object = rock || centipede || enemy || projectile || serafimHit;
   if (object) {
-    collideWithObject(object);
+    const cause = rock ? 'asteroide' : centipede || enemy ? 'colisao' : projectile ? 'tiro'
+      : beam?.live && serafimBeamHitsShip(beam) ? 'raio_serafim'
+      : hazards?.waves.includes(object) ? 'penas_serafim'
+      : hazards?.drones.includes(object) ? 'colisao' : 'tiro';
+    collideWithObject(object, cause);
     if (object === projectile) hostile.splice(hostile.indexOf(projectile), 1);
+    if (death) return;
   }
 }enemies=enemies.filter(e=>!e.dead&&e.x>-50);bullets=bullets.filter(b=>!b.dead&&b.x<990);hostile=hostile.filter(b=>b.x>-20&&b.x<1000&&b.y>-20&&b.y<500);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.t-=dt}particles=particles.filter(p=>p.t>0);for(const s of stars){s.x-=dt*(40+s.s*45)*drive;if(s.x<0)s.x=960}score+=Math.floor(dt*60);$('progress').style.width=(t/(audio.duration||933)*100)+'%';$('clock').textContent=fmt(t)+' / '+fmt(audio.duration||933);$('status').textContent=bossMode?'SINGULARIDADE / SOBREVIVA '+fmt(BOSS_END-t):'SETOR '+String(level).padStart(2,'0')+' / '+names[(level-1)%5]+' / '+drive.toFixed(1)+'×'}
 function fmt(t){return Math.floor(t/60).toString().padStart(2,'0')+':'+Math.floor(t%60).toString().padStart(2,'0')}
@@ -1017,6 +1025,7 @@ function drawWarpEchoes(time, strength) {
 }
 
 function drawInterceptor() {
+  if (death) { drawDeath(); return; }
   if (inv > 0 && Math.floor(inv * 18) % 2 !== 0) return;
   const time = audio.currentTime;
   const strength = smooth(HYPERSPACE_START, BOSS_START, time)
@@ -1337,5 +1346,17 @@ function drawRadio() {
   g.restore();
 }
 
-function loop(now){const dt=Math.min(.04,(now-last)/1000||.016);last=now;if(playing){update(dt);updateRadio();draw();drawRadio();}requestAnimationFrame(loop)}requestAnimationFrame(loop);
+function loop(now) {
+  const elapsed = Math.max(0, (now - last) / 1000 || .016);
+  const dt = Math.min(.04, elapsed);
+  last = now;
+  if (playing) {
+    if (death) { updateDeathWorld(dt); updateDeath(elapsed); }
+    else { update(dt); updateRadio(); }
+    draw();
+    if (!death) drawRadio();
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 </script><script src="launch.js"></script><script src="phase-tools.js"></script><script>showMenu('home');</script></html>
