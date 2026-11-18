@@ -1,118 +1,30 @@
 'use strict';
-const launchAssets = Object.fromEntries(['pilot','cockpit','flame','fuselage','foreground','hangar','boarding','hatch'].map(name => [name, loadArt('art/launch-' + name + (name === 'hangar' ? '.webp' : '.png'))]));
-const launchReady = Promise.all(Object.values(launchAssets).map(image => image.decode()));
+const launchFrames = Array.from({length:24}, (_, index) =>
+  loadArt('art/launch-scene/' + String(index + 1).padStart(3, '0') + '.png'));
+const launchReady = Promise.all(launchFrames.map(image => image.decode()));
 launchReady.catch(() => {});
-const launchDuration = 9.25;
+const launchFrameDurations = [.32,.32,.36,.3,.3,.4,
+  .28,.28,.28,.28,.28,.28,.28,.28,.28,.28,
+  .35,.4,.4,.4,.4,.45,.45,.65];
+const launchFrameEnds = [];
+let launchSceneDuration = 0;
+for (const duration of launchFrameDurations) {
+  launchSceneDuration += duration;
+  launchFrameEnds.push(launchSceneDuration);
+}
+const launchDuration = launchSceneDuration + .6;
 const launchCanvas = $('launchScene');
 const launchContext = launchCanvas.getContext('2d');
 let cancelLaunch = null;
-const launchClamp = value => Math.max(0, Math.min(1, value));
-const launchEase = value => { const t = launchClamp(value); return t * t * (3 - 2 * t); };
-
 function renderLaunch(time) {
-  const c = launchContext;
-  c.clearRect(0, 0, 960, 480);
-  c.imageSmoothingEnabled = false;
-  c.drawImage(launchAssets.hangar, 0, 0, 960, 480);
-  const lift = launchEase((time - 7.0) / .7);
-  const acceleration = launchClamp((time - 7.75) / .9);
-  const shipX = 310 + 900 * acceleration * acceleration;
-  const shipY = 248 - 64 * lift;
-  const width = 450;
-  const height = width * launchAssets.fuselage.height / launchAssets.fuselage.width;
-  const cockpitX = shipX + 235;
-  const cockpitY = shipY + 79;
-  const ignition = launchClamp((time - 6.55) / .5);
-  const vibration = time > 6.55 && time < 7.5 ? Math.sin(time * 71) * 1 : 0;
-  c.save();
-  c.translate(0, vibration);
-  if (time > 6.55) {
-    const frame = Math.floor(time * 18) % 4;
-    const flameWidth = (90 + 150 * acceleration) * ignition;
-    const energyWidths = [101, 105, 110, 112];
-    const nozzleX = shipX + 10;
-    const nozzleY = shipY + height * .55;
-    c.drawImage(launchAssets.flame, frame * 128, 0, energyWidths[frame], 64,
-      nozzleX - flameWidth, nozzleY - 35, flameWidth, 70);
-    for (let i = 0; i < 18; i++) {
-      const progress = (time * 1.7 + i * .137) % 1;
-      c.globalAlpha = (1 - progress) * ignition * .6;
-      c.fillStyle = i % 2 ? '#e9a657' : '#f8e1ac';
-      c.fillRect(shipX - progress * 120, shipY + height * .52 + i % 7 * 3, 3, 2);
-    }
-    c.globalAlpha = 1;
-  }
-  c.drawImage(launchAssets.fuselage, shipX, shipY, width, height);
-  function drawCanopy() {
-    const opening = time < 1.25 ? 0 : time < 2 ? (time - 1.25) / .75 :
-      time < 4.8 ? 1 : 1 - (time - 4.8) / .65;
-    const canopyFrame = Math.round(launchClamp(opening) * 3);
-    c.drawImage(launchAssets.cockpit, canopyFrame * 128, 0, 128, 128,
-      cockpitX - 11, cockpitY - 98, 110, 110);
-  }
-  if (time < 4.8) drawCanopy();
-  let frame, pilotX, pilotFoot;
-  if (time < 1) {
-    frame = Math.floor(time * 8) % 4;
-    pilotX = 420 + 100 * launchEase(time);
-    pilotFoot = 396;
-  } else if (time < 2) {
-    frame = 4 + Math.min(3, Math.floor((time - 1) * 4));
-    pilotX = 520; pilotFoot = 396;
-  } else if (time < 4.8) {
-    const progress = launchClamp((time - 2) / 2.8) * 11;
-    frame = Math.min(11, Math.floor(progress));
-    const blend = progress - frame;
-    const positions = [[520,396],[525,386],[534,370],[542,352],[548,348],[552,348],
-      [556,345],[558,350],[558,355],[558,360],[558,366],[558,366]];
-    const next = positions[Math.min(11, frame + 1)];
-    pilotX = positions[frame][0] + (next[0] - positions[frame][0]) * blend;
-    pilotFoot = positions[frame][1] + (next[1] - positions[frame][1]) * blend;
-  } else {
-    frame = 11; pilotX = cockpitX + 13; pilotFoot = cockpitY + 39;
-  }
-  if (time >= 3.65) {
-    c.save();
-    c.beginPath(); c.rect(cockpitX - 30, cockpitY - 80, 135, 133); c.clip();
-  }
-  c.drawImage(time >= 2 ? launchAssets.boarding : launchAssets.pilot, frame % 4 * 128, Math.floor(frame / 4) * 160, 128, 160,
-    pilotX - 48, pilotFoot - 120, 96, 120);
-  if (time >= 3.65) c.restore();
-  if (time >= 3.65) c.drawImage(launchAssets.foreground, shipX, shipY, width, height);
-  if (time >= 4.8) drawCanopy();
-  // Telescopic ladder keeps its upper mounts fixed to the fuselage.
-  const retraction = launchEase((time - 5.5) / .8);
-  const hatchClosure = launchEase((time - 6.3) / .2);
-  const mountX = cockpitX - 20;
-  const mountY = cockpitY + 20;
-  const ladderLength = (396 - mountY) * (1 - retraction);
-  if (retraction < 1) {
-    const lean = 18 * (1 - retraction);
-    c.strokeStyle = '#a4875c'; c.lineWidth = 3;
-    c.beginPath();
-    c.moveTo(mountX, mountY);
-    c.lineTo(mountX - lean, mountY + ladderLength);
-    c.moveTo(mountX + 22, mountY);
-    c.lineTo(mountX + 22 - lean, mountY + ladderLength);
-    c.stroke();
-    for (let i = 1; i <= 3; i++) {
-      const fraction = i / 3;
-      c.fillStyle = '#756951';
-      c.fillRect(Math.round(mountX - lean * fraction),
-        Math.round(mountY + ladderLength * fraction), 23, 3);
-    }
-  }
-  // The cover slides across the stowed ladder compartment.
-  if (time >= 5.5) {
-    c.save();
-    c.beginPath(); c.rect(mountX - 3, mountY - 3, 29, 7); c.clip();
-    c.fillStyle = '#171415'; c.fillRect(mountX - 3, mountY - 3, 29, 7);
-    c.drawImage(launchAssets.hatch, shipX - 29 * (1 - hatchClosure), shipY, width, height);
-    c.restore();
-  }
-  c.restore();
-  const fade = Math.max(1 - launchEase(time / .25), launchEase((time - 8.65) / .6));
-  c.fillStyle = 'rgba(0,0,0,' + fade + ')'; c.fillRect(0, 0, 960, 480);
+  const frame = launchFrameEnds.findIndex(end => time < end);
+  const index = frame < 0 ? launchFrames.length - 1 : frame;
+  launchContext.imageSmoothingEnabled = false;
+  launchContext.drawImage(launchFrames[index], 0, 0, 960, 480);
+  const fadeIn = Math.max(0, 1 - time / .2);
+  const fadeOut = Math.max(0, Math.min(1, (time - launchSceneDuration) / .6));
+  launchContext.fillStyle = 'rgba(0,0,0,' + Math.max(fadeIn, fadeOut) + ')';
+  launchContext.fillRect(0, 0, 960, 480);
 }
 
 function launchSound(frequency, duration, type, volume) {
@@ -136,9 +48,13 @@ async function playLaunchFilm() {
   menuPage = 'launch';
   return new Promise(resolve => {
     let request, previous = performance.now(), elapsed = 0, nextSound = 0;
-    const sounds = [[1.3, 780, .12, 'square', .035], [1.4, 180, .55, 'triangle', .09],
-      [4.85, 160, .6, 'triangle', .09], [5.5, 220, .8, 'triangle', .07], [6.48, 920, .08, 'square', .03],
-      [6.55, 65, .9, 'sawtooth', .045], [7.55, 95, 1.05, 'sawtooth', .055]];
+    const sounds = [[launchFrameEnds[2],780,.12,'square',.035],
+      [launchFrameEnds[3],180,.55,'triangle',.09],
+      [launchFrameEnds[15],160,.6,'triangle',.09],
+      [launchFrameEnds[17],220,.6,'triangle',.07],
+      [launchFrameEnds[19]-.05,920,.08,'square',.03],
+      [launchFrameEnds[19],65,.7,'sawtooth',.045],
+      [launchFrameEnds[21],95,1.05,'sawtooth',.055]];
     const voices = [];
     function finish() {
       cancelAnimationFrame(request);
