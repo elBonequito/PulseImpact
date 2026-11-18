@@ -30,8 +30,8 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 @media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
 @media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
 .launch-film{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;background:#000;pointer-events:none}
-</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V60</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
-<div class="menu-art" aria-hidden="true"></div><video id="launchFilm" class="launch-film" src="art/menu-launch.webm" preload="auto" muted playsinline aria-hidden="true" hidden></video>
+</style><main><header><div><small>JOGADOR DO EQUINÓCIO / EXPERIMENTO 01</small><h1>PULSE IMPACT</h1></div><span class="tag">V61</span></header><div class="shell"><div class="screen"><canvas width="1920" height="960" id="c" aria-label="Jogo de nave horizontal"></canvas><canvas id="serafimLayer" width="960" height="480" aria-hidden="true"></canvas><div class="overlay game-menu" id="overlay">
+<div class="menu-art" aria-hidden="true"></div><canvas id="launchScene" class="launch-film" width="960" height="480" aria-hidden="true" hidden></canvas>
 <div class="menu-content">
 <h2 id="title">PULSE IMPACT</h2><p class="menu-copy" id="desc" role="status"></p>
 <div class="menu-options" id="menuOptions" aria-label="Opções do jogo"></div>
@@ -159,6 +159,7 @@ function showMenu(page, message = '') {
 }
 function goHome() {
   uiSession++;
+  if (cancelLaunch) cancelLaunch();
   openingGame = false;
   audio.pause(); playing = false; started = false;
   keys = {}; pointer = null;
@@ -176,33 +177,17 @@ function showPlaying() {
   $('pause').textContent = 'Ⅱ PAUSAR';
   document.activeElement?.blur();
 }
-function playLaunchFilm() {
-  const film = $('launchFilm');
-  film.currentTime = 0;
-  film.hidden = false;
-  $('overlay').inert = true;
-  menuPage = 'launch';
-  return new Promise(resolve => {
-    function finish() {
-      clearTimeout(timeout);
-      film.removeEventListener('ended', finish);
-      film.removeEventListener('error', finish);
-      film.pause();
-      resolve();
-    }
-    const timeout = setTimeout(finish, 7000);
-    film.addEventListener('ended', finish);
-    film.addEventListener('error', finish);
-    film.play().catch(finish);
-  });
-}
 async function start(fresh = false, animate = false) {
   if (openingGame) return;
   openingGame = true;
   const session = ++uiSession;
   const overlay = $('overlay');
-  const film = $('launchFilm');
+  const film = $('launchScene');
   try {
+    playing = false;
+    audio.pause();
+    stopShotSound();
+    keys = {}; pointer = null;
     initAudio();
     const audioReady = ctx.resume();
     if (fresh || !started || hp <= 0 || audio.ended) reset();
@@ -219,6 +204,8 @@ async function start(fresh = false, animate = false) {
     pointer = null;
     showPlaying();
     playing = true;
+    last = performance.now();
+    canvas.animate([{opacity:0},{opacity:1}], {duration:300, easing:'ease-out'});
   } catch {
     if (session === uiSession) {
       audio.pause();
@@ -1341,5 +1328,5 @@ function drawRadio() {
   g.restore();
 }
 
-function loop(now){const dt=Math.min(.04,(now-last)/1000||.016);last=now;if(playing){update(dt);updateRadio();draw();drawRadio();}requestAnimationFrame(loop)}showMenu('home');requestAnimationFrame(loop);
-</script></html>
+function loop(now){const dt=Math.min(.04,(now-last)/1000||.016);last=now;if(playing){update(dt);updateRadio();draw();drawRadio();}requestAnimationFrame(loop)}requestAnimationFrame(loop);
+</script><script src="launch.js"></script><script>showMenu('home');</script></html>
