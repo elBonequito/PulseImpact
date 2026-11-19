@@ -17,7 +17,8 @@ function hudPlate(x, y, width, height) {
   }
 }
 
-function drawHud() {
+function drawHud(context=g) {
+  const g=context;
   const time = audio.currentTime;
   const dt = Math.max(0, Math.min(.1, time - hudState.time));
   if (score < hudState.score || time < hudState.time) {
