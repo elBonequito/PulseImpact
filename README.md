@@ -29,3 +29,7 @@ Drones: novo `art/drone-needle.png`, PNG RGBA32×16, desenhado20×8 incluindo ma
 Entrada2:53: onda circular completa de1,1s, alcance calculado pelo canto mais distante+40px, duas frentes, interior transparente e clarão inicial curto. Renderiza na camada não invertida do Serafim; HUD redesenhada acima. Pulso permanece visual, sem novo dano. Som anterior preservado.
 
 Verificado: sintaxe JavaScript, cinco mortes e oito rotas de colisão, antecipação, captura e fixação da mira, caminho determinístico consultado a20/30/60/120FPS, colisão varrida e limpeza dos caches. Não foi possível validar visualmente/escutar no navegador neste ambiente. Fazer conferência local do ritmo das rajadas, alinhamento com asas, equilíbrio do som e abertura completa antes de publicar.
+
+
+## v69 — teste com vida infinita
+Impactos mantêm casco em5/5, com recuo e piscar preservados. Base v68, sem transformação ou segunda fase. Use o seletor COMBATE · SERAFIM (2:55) para testar.
