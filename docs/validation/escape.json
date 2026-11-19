@@ -1,0 +1,8 @@
+{
+  "pass": true,
+  "minimumReachablePoints": 5,
+  "gridStep": 20,
+  "stepSeconds": 0.1,
+  "speed": 200,
+  "scope": "fixed recorded aim; geometry smoke test, not full gameplay balancing"
+}

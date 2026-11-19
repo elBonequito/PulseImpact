@@ -1,0 +1,203 @@
+{
+  "version": 71,
+  "layout": {
+    "columns": 4,
+    "rows": 2,
+    "order": "row-major",
+    "sourceWidth": 1774,
+    "sourceHeight": 887,
+    "cellWidth": 443.5,
+    "cellHeight": 443.5,
+    "alpha": true
+  },
+  "boss": {
+    "renderSize": 332,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "sheets": {
+      "coroa.png": {
+        "preparation": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "release": [
+          4
+        ],
+        "recovery": [
+          5,
+          6,
+          7
+        ]
+      },
+      "julgamento.png": {
+        "preparation": [
+          0,
+          1,
+          2
+        ],
+        "lockedWarning": [
+          3
+        ],
+        "release": [
+          4
+        ],
+        "recovery": [
+          5,
+          6,
+          7
+        ],
+        "jewelAnchors": [
+          [
+            0.23,
+            0.69
+          ],
+          [
+            0.23,
+            0.69
+          ],
+          [
+            0.14,
+            0.52
+          ],
+          [
+            0.14,
+            0.52
+          ],
+          [
+            0.14,
+            0.52
+          ],
+          [
+            0.14,
+            0.52
+          ],
+          [
+            0.23,
+            0.69
+          ],
+          [
+            0.23,
+            0.69
+          ]
+        ]
+      },
+      "pulso.png": {
+        "preparation": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "release": [
+          4
+        ],
+        "recovery": [
+          5,
+          6,
+          7
+        ],
+        "core": [
+          0.51,
+          0.46
+        ]
+      }
+    }
+  },
+  "drone": {
+    "sheet": "relicarios.png",
+    "renderSize": 40,
+    "idle": [
+      0,
+      1
+    ],
+    "charge": [
+      2,
+      3
+    ],
+    "fire": [
+      4,
+      5
+    ],
+    "destruction": [
+      6,
+      7
+    ],
+    "inversion": "Canvas filter invert(1) applied once on overlay; not CSS inverted a second time"
+  },
+  "timeline": {
+    "transformStart": 210,
+    "combatStart": 240,
+    "beatPeriod": 0.4,
+    "attackOrigin": 240.39,
+    "slotDuration": 12.8,
+    "bossEnd": 304,
+    "attackOrder": [
+      "coroa",
+      "julgamento",
+      "relicarios",
+      "pulso"
+    ]
+  },
+  "frames": [
+    {
+      "index": 0,
+      "x": 0.0,
+      "y": 0.0,
+      "width": 443.5,
+      "height": 443.5
+    },
+    {
+      "index": 1,
+      "x": 443.5,
+      "y": 0.0,
+      "width": 443.5,
+      "height": 443.5
+    },
+    {
+      "index": 2,
+      "x": 887.0,
+      "y": 0.0,
+      "width": 443.5,
+      "height": 443.5
+    },
+    {
+      "index": 3,
+      "x": 1330.5,
+      "y": 0.0,
+      "width": 443.5,
+      "height": 443.5
+    },
+    {
+      "index": 4,
+      "x": 0.0,
+      "y": 443.5,
+      "width": 443.5,
+      "height": 443.5
+    },
+    {
+      "index": 5,
+      "x": 443.5,
+      "y": 443.5,
+      "width": 443.5,
+      "height": 443.5
+    },
+    {
+      "index": 6,
+      "x": 887.0,
+      "y": 443.5,
+      "width": 443.5,
+      "height": 443.5
+    },
+    {
+      "index": 7,
+      "x": 1330.5,
+      "y": 443.5,
+      "width": 443.5,
+      "height": 443.5
+    }
+  ]
+}

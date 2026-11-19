@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Transformation and boss end have no hazards",
+    "status": "PASS"
+  },
+  {
+    "name": "Four exclusive attack slots and precise shortcuts",
+    "status": "PASS"
+  },
+  {
+    "name": "Feathers move straight from wing tips with fixed trajectories",
+    "status": "PASS"
+  },
+  {
+    "name": "Double beam has separate warning, lock and two live windows",
+    "status": "PASS"
+  },
+  {
+    "name": "Beam origin matches sprite jewel anchor",
+    "status": "PASS"
+  },
+  {
+    "name": "Drones orbit and die after three player shots with destruction animation",
+    "status": "PASS"
+  },
+  {
+    "name": "Pulse gap is harmless, visible ring hurts, center harmless",
+    "status": "PASS"
+  },
+  {
+    "name": "Repeated same-time evaluation never duplicates projectiles",
+    "status": "PASS"
+  },
+  {
+    "name": "Seeking back clears targeting and destruction state",
+    "status": "PASS"
+  },
+  {
+    "name": "Infinite life remains enabled",
+    "status": "PASS"
+  },
+  {
+    "name": "Full second form sweep at 60 FPS has finite bounded hazard state",
+    "status": "PASS"
+  }
+]

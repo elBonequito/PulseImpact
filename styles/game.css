@@ -1,0 +1,32 @@
+
+@font-face{font-family:"Pulse Serif";src:url("../art/menu/menu-serif.ttf") format("truetype");font-weight:400 700;font-display:swap}
+*{box-sizing:border-box}body{margin:0;background:#10140e;color:#c3d490;font:14px "Pulse Serif", serif;display:flex;min-height:100vh;align-items:center;justify-content:center}main{width:min(1100px,96vw)}header{display:flex;justify-content:space-between;align-items:center;margin:20px 0}h1{font-size:25px;letter-spacing:8px;margin:0}small{color:#7f8e68;letter-spacing:2px}.shell{padding:18px;background:#303a29;border:1px solid #63714b;border-radius:18px;box-shadow:0 30px 100px #0008}.screen{position:relative;background:#a8bb79;overflow:hidden;border:5px solid #171e13;border-radius:5px}canvas{width:100%;display:block;image-rendering:pixelated;touch-action:none}.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#a8bb79eF;color:#202c19;text-align:center;padding:20px}.overlay h2{font-size:clamp(26px,6vw,64px);letter-spacing:8px;margin:0 0 12px}.overlay p{max-width:460px;line-height:1.7}button{font:inherit;background:#202c19;color:#d0dfa8;border:1px solid #718553;padding:13px 23px;cursor:pointer}button:hover{background:#3c502c}footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0;color:#8d9e72}nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}nav button{padding:8px 14px}.bar{flex:1;min-width:120px;height:5px;background:#1c2417}.bar i{display:block;height:100%;background:#bfd38e;width:0}input{accent-color:#bed28b;width:80px}.tag{font-size:11px;border:1px solid #536243;padding:6px}#touch{display:none}@media(pointer:coarse){#touch{display:block}footer{font-size:11px}}
+
+.sector-tick{position:absolute;top:-6px;width:10px;height:16px;padding:0;transform:translateX(-50%);background:transparent;border:0;border-left:2px solid #e4efc2}
+.sector-tick:hover,.sector-tick:focus-visible{border-left-color:#ffc96d;outline:1px solid #ffc96d}
+.bar{position:relative;margin:10px 6px;min-width:min(360px,85vw)}
+#serafimLayer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+[hidden]{display:none!important}
+body{background:#110d15;color:#d8c49a}header,footer{color:#a8b987} .shell{background:#24201e;border-color:#5b4d37}
+.screen{background:#130e17;border-color:#2c2425}
+.game-menu.overlay{display:block;z-index:3;padding:0;text-align:left;color:#ead8ad;background:#150f19;overflow:hidden}
+.menu-art{position:absolute;inset:0;pointer-events:none;background:url('../art/menu/menu-roses.gif') center right/cover no-repeat}
+.game-menu.home .menu-content h2{background:url('../art/menu/menu-logo.png') left center/contain no-repeat;color:transparent;text-shadow:none;letter-spacing:0;width:100%;max-width:420px;aspect-ratio:420/138;font-size:0}
+@media(prefers-reduced-motion:reduce){.menu-art{background-image:url('../art/menu/menu-pilot.png')}}
+.menu-content{position:relative;z-index:1;padding:clamp(12px,4vw,54px);width:58%;height:100%;display:flex;flex-direction:column;justify-content:center}
+.game-menu h2{margin:0 0 clamp(8px,2vw,24px);font:bold clamp(25px,5.2vw,68px)/.87 "Pulse Serif", serif;letter-spacing:.085em;color:#e0bf78;text-shadow:0 3px #543724,0 0 22px #91644377}
+.menu-options{display:grid;gap:3px;max-width:300px}
+.menu-options button,.menu-back{position:relative;text-align:left;border:1px solid transparent;background:transparent;color:#e8d7b1;padding:clamp(5px,1.05vw,12px) 12px clamp(5px,1.05vw,12px) 33px;font:400 clamp(12px,1.7vw,20px) "Pulse Serif", serif;text-transform:uppercase;letter-spacing:.13em}
+.menu-options button:hover,.menu-options button[aria-current=true]{border-color:#91744b;background:#7b5b302e;color:#ffe6aa}
+.menu-options button[aria-current=true]::before{content:'☾';position:absolute;left:11px;color:#f1ca76}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid #f1ca76;outline-offset:2px}
+.menu-copy{font-size:clamp(11px,1.55vw,16px);line-height:1.5;margin:0 0 8px}
+.game-menu.paused{background:#100c16b8}
+.game-menu.paused .menu-art{display:none}
+.game-menu.launching .menu-content{opacity:0;transition:opacity .18s}
+.game-menu.launching{animation:depart .62s ease-in forwards}
+.dev-panel{color:#a9ba88;margin:9px 0 0}.dev-panel summary{cursor:pointer}.dev-panel nav{margin-top:8px}
+@keyframes depart{70%{opacity:1}to{opacity:0}}
+@media(max-width:550px){.shell{padding:5px}.screen{min-height:195px}.menu-content{width:68%}.menu-copy{line-height:1.25}}
+@media(prefers-reduced-motion:reduce){.game-menu.launching{animation:none}}
+.launch-film{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:contain;background:#000;pointer-events:none}
